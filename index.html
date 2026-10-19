@@ -152,6 +152,10 @@ h2.h{font:900 34px/.95 var(--f-wide);font-stretch:125%;text-transform:uppercase;
 .go{width:44px;height:44px;border-radius:50%;background:var(--p);color:var(--ink);display:grid;place-items:center;flex:none}
 .go:disabled{opacity:.3}
 .sugg{margin-top:8px;border-radius:14px;background:var(--deck);overflow:hidden}
+.songline{display:flex;align-items:flex-end;gap:8px;margin-top:12px}
+.songline .q{font:italic 500 clamp(34px,10vw,48px)/.9 var(--f-ital);color:var(--p);flex:none}
+#g-song{text-transform:none;font:italic 500 clamp(22px,6.6vw,30px)/1.15 var(--f-ital);letter-spacing:0}
+#g-song::placeholder{font:italic 500 22px var(--f-ital);color:var(--dim)}
 .sugg:empty{display:none}
 .sugg button{width:100%;display:flex;align-items:center;gap:12px;padding:10px 12px;border-bottom:1px solid var(--line);font:750 15px/1.2 var(--f-wide);text-transform:uppercase;font-stretch:110%}
 .sugg button:last-child{border-bottom:0}
@@ -261,7 +265,7 @@ h2.h{font:900 34px/.95 var(--f-wide);font-stretch:125%;text-transform:uppercase;
   <div class="wrap">
     <div class="cat"><span class="mono">FA-001 · ℗ 2026</span><span class="mono">El Invitado Records</span></div>
     <h1 class="logo" aria-label="Feat Arena"><span class="w" aria-hidden="true">Feat</span><span class="w out" aria-hidden="true">Arena</span><span class="ft" aria-hidden="true">ft.</span></h1>
-    <p class="tagline">Suena un tema. Tú dices con quién ha colaborado. El siguiente sigue la cadena.</p>
+    <p class="tagline">Suena un tema. Tú dices con quién ha colaborado el artista y en qué canción. El siguiente sigue la cadena.</p>
     <ol class="credits" aria-label="Así suena una partida">
       <li><span>01</span><span>Kanye West <i>ft.</i> Kid Cudi</span></li>
       <li><span>02</span><span>Kid Cudi <i>ft.</i> Travis Scott</span></li>
@@ -290,6 +294,8 @@ h2.h{font:900 34px/.95 var(--f-wide);font-stretch:125%;text-transform:uppercase;
     <div class="seg" id="set-time" role="group" aria-label="Tiempo por turno"><button data-v="15">15 s</button><button data-v="20">20 s</button><button data-v="30">30 s</button><button data-v="0">Sin reloj</button></div>
     <div class="sec-t"><span class="mono">De dónde sale el primer tema</span></div>
     <div class="packs" id="set-pack"></div>
+    <div class="sec-t"><span class="mono">Reglas</span></div>
+    <div id="set-rules"></div>
     <div class="sec-t"><span class="mono">Comodines · uno de cada por jugador</span></div>
     <div id="set-wild"></div>
     <div class="foot stack">
@@ -319,6 +325,16 @@ h2.h{font:900 34px/.95 var(--f-wide);font-stretch:125%;text-transform:uppercase;
         <button class="go" id="g-go" type="button" aria-label="Comprobar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
       </div>
       <div class="sugg" id="g-sugg" role="listbox" aria-label="Sugerencias"></div>
+      <div class="songline" id="g-songline" hidden>
+        <span class="q" aria-hidden="true">«</span>
+        <div class="blank">
+          <label class="sr" for="g-song">Título de la canción</label>
+          <input id="g-song" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="go" placeholder="¿en qué tema?">
+          <button class="mic" id="g-mic2" type="button" aria-label="Decir el título en voz alta" hidden><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
+        </div>
+        <span class="q" aria-hidden="true">»</span>
+        <button class="go" id="g-go2" type="button" aria-label="Comprobar el tema"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+      </div>
     </div>
     <div class="clock" id="g-clock"><span class="mono" id="g-t1">0:00</span><div class="track"><i id="g-bar"></i></div><span class="mono" id="g-t2">0:20</span></div>
     <p class="msg" id="g-msg" aria-live="polite"></p>
@@ -459,13 +475,22 @@ const SP={
     return{status:r.status,ok:r.ok,data};
   },
   async artists(q){const r=await this.api('/search?type=artist&limit=7&q='+encodeURIComponent(q));return(r.data&&r.data.artists&&r.data.artists.items||[]).map(a=>({id:a.id,name:a.name,img:imgOf(a.images,64)}));},
+  async findSong(A,B,title,known){
+    const hit=(known||[]).filter(t=>titleMatch(title,t.name));
+    if(hit.length)return hit;
+    const q=s=>this.api('/search?type=track&limit=10&q='+encodeURIComponent(s)).then(r=>r.data&&r.data.tracks&&r.data.tracks.items||[]).catch(()=>[]);
+    const sets=await Promise.all([q(`${title} ${A.name} ${B.name}`),q(`track:"${title}" artist:"${A.name}"`),q(`track:"${title}" artist:"${B.name}"`),q(`${title} ${A.name}`)]);
+    const seen=new Set(),out=[];
+    sets.flat().forEach(t=>{if(!t||!t.artists||seen.has(t.id))return;if(!pairOk(t,A,B)||!titleMatch(title,t.name))return;seen.add(t.id);out.push(trackOf(t));});
+    return out.slice(0,5);
+  },
   async findFeat(A,B){
     const q=s=>this.api('/search?type=track&limit=10&q='+encodeURIComponent(s)).then(r=>r.data&&r.data.tracks&&r.data.tracks.items||[]).catch(()=>[]);
     const off=s=>this.api('/search?type=track&limit=10&offset=10&q='+encodeURIComponent(s)).then(r=>r.data&&r.data.tracks&&r.data.tracks.items||[]).catch(()=>[]);
     const sets=await Promise.all([q(`${A.name} ${B.name}`),off(`${A.name} ${B.name}`),q(`artist:"${A.name}" ${B.name}`),q(`artist:"${B.name}" ${A.name}`)]);
     const seen=new Set(),out=[];
-    sets.flat().forEach(t=>{if(!t||!t.artists)return;const ids=t.artists.map(a=>a.id);const ok=(ids.includes(A.id)&&ids.includes(B.id))||(ids.includes(A.id)&&featIn(t.name,B.name))||(ids.includes(B.id)&&featIn(t.name,A.name));
-      if(!ok)return;const key=norm(t.name.replace(/\s*[-(\[].*$/,''))+'|'+ids.slice().sort().join();if(seen.has(t.id)||seen.has(key))return;seen.add(t.id);seen.add(key);out.push(trackOf(t));});
+    sets.flat().forEach(t=>{if(!t||!t.artists)return;const ids=t.artists.map(a=>a.id);
+      if(!pairOk(t,A,B))return;const key=norm(t.name.replace(/\s*[-(\[].*$/,''))+'|'+ids.slice().sort().join();if(seen.has(t.id)||seen.has(key))return;seen.add(t.id);seen.add(key);out.push(trackOf(t));});
     return out.slice(0,5);
   },
   async randomTrack(names){
@@ -500,12 +525,28 @@ const SP={
 };
 function b64(bytes){let s='';bytes.forEach(b=>s+=String.fromCharCode(b));return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
 function imgOf(imgs,min){if(!imgs||!imgs.length)return null;const s=imgs.slice().sort((a,b)=>(a.width||0)-(b.width||0));return(s.find(i=>(i.width||0)>=min)||s[s.length-1]).url;}
+function pairOk(t,A,B){const ids=t.artists.map(a=>a.id);return(ids.includes(A.id)&&ids.includes(B.id))||(ids.includes(A.id)&&featIn(t.name,B.name))||(ids.includes(B.id)&&featIn(t.name,A.name));}
+function cleanTitle(t){return String(t||'').replace(/\s*[\(\[][^\)\]]*[\)\]]/g,'').replace(/\s+-\s+.*$/,'').replace(/^(the|el|la|los|las)\s+/i,'');}
+function lev(a,b){const m=a.length,n=b.length;if(!m)return n;if(!n)return m;let prev=Array.from({length:n+1},(_,j)=>j);for(let i=1;i<=m;i++){const cur=[i];for(let j=1;j<=n;j++)cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1));prev=cur;}return prev[n];}
+function titleMatch(said,title){
+  const a=norm(cleanTitle(said)),b=norm(cleanTitle(title)),full=norm(title);
+  if(a.length<2||!b)return false;
+  if(a===b||a===full)return true;
+  const lo=Math.min(a.length,b.length),hi=Math.max(a.length,b.length);
+  if(lo>=4&&lo/hi>=.6&&(b.includes(a)||a.includes(b)))return true;
+  if(lev(a,b)<=Math.max(1,Math.floor(hi*.2)))return true;
+  const tk=x=>String(x||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').split(/[^a-z0-9ñ]+/).filter(w=>w&&(w.length>1||/\d/.test(w))&&!STOP.has(w));
+  const S=tk(said),Tt=tk(title);
+  if(S.length<2||S.length/Tt.length<.5)return false;
+  return S.every(w=>Tt.some(t=>t===w||(w.length>=4&&t.length>=4&&lev(w,t)<=1)));
+}
+const STOP=new Set(['vol','feat','ft','the','el','la','los','las','de','del','y','and','with','con','a','en']);
 function featIn(title,name){const t=norm(title),n=norm(name);return n.length>2&&t.includes(n)&&/(feat|ft\.|with|con |\(|x )/i.test(title);}
 function trackOf(t){return{id:t.id,uri:t.uri,name:t.name,artists:t.artists.map(a=>({id:a.id,name:a.name})),img:imgOf(t.album&&t.album.images,120),url:t.external_urls&&t.external_urls.spotify};}
 const spSearch=(a,b)=>'https://open.spotify.com/search/'+encodeURIComponent(a+' '+b);
 
 /* ================= state ================= */
-const defCfg={players:['',''],lives:3,time:20,pack:'mix',wild:{rebote:true,prorroga:true,diss:true}};
+const defCfg={players:['',''],lives:3,time:20,pack:'mix',song:true,wild:{rebote:true,prorroga:true,diss:true}};
 let cfg=Object.assign({},defCfg,ls.get('fa.cfg')||{});cfg.wild=Object.assign({},defCfg.wild,cfg.wild||{});
 let G=ls.get('fa.game');if(G&&G.phase==='over')G=null;
 const saveG=()=>{if(G)ls.set('fa.game',G);else ls.del('fa.game');};
@@ -538,9 +579,9 @@ const INTRO=[
   'Igual no me conocéis por la cara, pero me habéis oído mil veces. Soy <b>El Invitado</b>.',
   'Nunca he sacado un disco propio. No me ha hecho falta. Mi nombre va siempre después del <em>ft.</em>: en el temazo del verano, en la canción de vuestra boda, en ese remix que nadie pidió.',
   'Tantos años colándome en canciones ajenas dan para mucho. Sé quién ha grabado con quién y quién le debe un estribillo a quién. He montado esta arena para comprobar cuánto sabéis vosotros.',
-  'Funciona así. Suena un tema. El primero tiene que decirme un <b>feat del artista que lo canta</b>: cualquier canción suya con otra persona. Si existe, la pincho, y el siguiente tira del nombre nuevo.',
+  'Funciona así. Suena un tema. El primero tiene que decirme un <b>feat del artista que lo canta</b>: con quién ha colaborado y <b>en qué canción</b>. Si existe, la pincho, y el siguiente tira del nombre nuevo.',
   'Prohibido volver atrás. Si alguien dice <b>Kanye <em>ft.</em> Kid Cudi</b>, el siguiente no me puede devolver Kid Cudi con Kanye. Y una pareja que ya ha sonado no se repite en toda la noche.',
-  'Cada uno empieza con sus vidas. Si se acaba el tiempo, os rendís o me decís un feat que no existe, perdéis una. Sin vidas, al backstage. El último que quede, se lleva la sesión.',
+  'Cada uno empieza con sus vidas. Si se acaba el tiempo, os rendís o me decís un feat o una canción que no existen, perdéis una. Sin vidas, al backstage. El último que quede, se lleva la sesión.',
   'Para los apuros hay comodines. El <b>Rebote</b>: si con el último nombre no sacáis nada, tiráis del anterior, el que usó vuestro rival. La <b>Prórroga</b>, quince segundos más. Y el <b>Diss</b>: si acertáis con él puesto, el siguiente juega con la mitad de tiempo.',
   'Si nadie consigue nada con un artista, cambio de disco y a otra cosa. Al final os doy la mixtape con todo lo que ha sonado, en orden. Pasaos el móvil. Empieza la sesión.'
 ];
@@ -593,6 +634,7 @@ function renderSetup(){
   [['#set-lives','lives'],['#set-time','time']].forEach(([s,k])=>[...$(s).children].forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.v===cfg[k]))));
   const packs=[['mine','Tu Spotify']].concat(['mix','es','us','latin','pop'].map(k=>[k,PACKS[k].name]));
   $('#set-pack').innerHTML=packs.map(([k,n])=>`<button class="pk" data-pk="${k}" aria-pressed="${cfg.pack===k}" ${k==='mine'&&m!=='spotify'?'disabled':''}>${n}</button>`).join('');
+  $('#set-rules').innerHTML=`<div class="wrow"><div><b>Artista y canción</b><p>Además de con quién, hay que decir el título del tema. Si lo apagas, basta con el artista.</p></div><button class="sw" data-rule="song" role="switch" aria-checked="${!!cfg.song}" aria-label="Exigir la canción"></button></div>`;
   $('#set-wild').innerHTML=Object.keys(WILD).map(k=>`<div class="wrow"><div><b>${WILD[k].name}</b><p>${WILD[k].desc}</p></div><button class="sw" data-wild="${k}" role="switch" aria-checked="${!!cfg.wild[k]}" aria-label="${WILD[k].name}"></button></div>`).join('');
   $('#set-go').textContent=m==='spotify'?'Pinchar el primer tema':'Sacar el primer artista';
   $('#set-note').textContent=m==='spotify'?'El primer tema sonará en el Spotify de este móvil. Ábrelo antes y déjalo en segundo plano.':'Sin Spotify conectado: el grupo hace de jurado y decide si cada feat existe.';
@@ -604,6 +646,7 @@ $('#set-lives').onclick=e=>{const b=e.target.closest('button');if(b){cfg.lives=+
 $('#set-time').onclick=e=>{const b=e.target.closest('button');if(b){cfg.time=+b.dataset.v;ls.set('fa.cfg',cfg);renderSetup();}};
 $('#set-pack').onclick=e=>{const b=e.target.closest('button');if(b&&!b.disabled){cfg.pack=b.dataset.pk;ls.set('fa.cfg',cfg);renderSetup();}};
 $('#set-wild').onclick=e=>{const b=e.target.closest('[data-wild]');if(b){cfg.wild[b.dataset.wild]=!cfg.wild[b.dataset.wild];ls.set('fa.cfg',cfg);renderSetup();}};
+$('#set-rules').onclick=e=>{const b=e.target.closest('[data-rule]');if(b){cfg.song=!cfg.song;ls.set('fa.cfg',cfg);renderSetup();}};
 $('#set-go').onclick=startGame;
 
 /* ================= game: lifecycle ================= */
@@ -615,7 +658,7 @@ async function startGame(){
   const names=cfg.players.map((n,i)=>n.trim()||`Jugador ${i+1}`);
   G={id:Date.now(),mode:mode(),date:Date.now(),
     players:names.map((n,i)=>({id:'p'+i,name:n,color:PRESS[i],lives:cfg.lives,score:0,used:{}})),
-    lives:cfg.lives,time:cfg.time,wild:Object.assign({},cfg.wild),pack:cfg.pack,
+    lives:cfg.lives,time:cfg.time,wild:Object.assign({},cfg.wild),pack:cfg.pack,songMode:!!cfg.song,
     turn:0,base:null,prev:null,rebote:false,dissArmed:false,halfNext:false,
     chain:[],records:[],used:{},fails:0,phase:'spinning',np:null,playState:null,pending:null,remain:null};
   show('scr-game');renderGame();keepAwake();
@@ -647,20 +690,20 @@ async function newRecord(first){
 function beginTurn(){
   G.phase='turn';G.rebote=false;G.dissArmed=false;G.pending=null;G.paused=false;
   let t=G.time?G.time*1000:0;if(t&&G.halfNext)t=Math.round(t/2);
-  G.halfNext=false;G.turnMs=t;G.remain=t;G.endsAt=t?Date.now()+t:0;
-  $('#g-in').value='';$('#g-sugg').innerHTML='';
+  G.halfNext=false;G.turnBase=t;G.turnMs=t;G.remain=t;G.endsAt=t?Date.now()+t:0;
+  $('#g-in').value='';$('#g-song').value='';$('#g-sugg').innerHTML='';
   setMsg(G.turnMs&&G.turnMs<(G.time*1000)?'Te han tirado un diss: tienes la mitad de tiempo.':'');
   saveG();renderGame();startTick();
   setTimeout(()=>{if(G&&G.phase==='turn'&&!('ontouchstart' in window))$('#g-in').focus();},60);
 }
 function startTick(){clearInterval(tick);tick=setInterval(onTick,200);onTick();}
 function onTick(){
-  if(!G||G.phase!=='turn'||!G.endsAt||!$('#ov-pause').hidden)return renderClock();
+  if(!G||(G.phase!=='turn'&&G.phase!=='song')||!G.endsAt||!$('#ov-pause').hidden)return renderClock();
   if(Date.now()>=G.endsAt){fail('time');return;}
   renderClock();
 }
 function pauseClock(){if(G&&G.endsAt){G.remain=Math.max(0,G.endsAt-Date.now());G.endsAt=0;G.paused=true;saveG();}}
-function resumeClock(){if(G&&G.paused&&G.phase==='turn'){G.paused=false;if(G.turnMs)G.endsAt=Date.now()+G.remain;saveG();}}
+function resumeClock(){if(G&&G.paused&&(G.phase==='turn'||G.phase==='song')){G.paused=false;if(G.turnMs)G.endsAt=Date.now()+G.remain;saveG();}}
 function nextTurn(){
   const al=alive();
   if(al.length<=1){return gameOver();}
@@ -677,7 +720,18 @@ async function submit(B){
   if(!B||!B.name.trim()){shakeMsg('Escribe un nombre.');return;}
   if(B.id===A.id||norm(B.name)===norm(A.name)){shakeMsg(`Un feat de ${A.name} con ${A.name} no cuenta.`);return;}
   if(G.used[key(A,B)]){shakeMsg(G.prev&&(B.id===G.prev.id)&&!G.rebote?'Nada de back2back: esa pareja acaba de sonar.':'Esa pareja ya ha sonado en esta partida.');return;}
-  pauseClock();$('#g-sugg').innerHTML='';
+  pauseClock();sugg=[];$('#g-sugg').innerHTML='';
+  if(G.songMode){
+    G.pending={b:B,known:[]};
+    if(G.mode==='spotify'){
+      G.phase='checking';renderGame();setMsg(`Buscando ${A.name} con ${B.name}…`);
+      let res=[];try{res=await SP.findFeat(A,B);}catch(e){res=[];}
+      if(!G||G.phase!=='checking')return;
+      G.pending.known=res||[];
+      enterSong(G.pending.known.length?`Hay feat de ${A.name} con ${B.name}. ¿En qué tema?`:'No lo veo a la primera. Dime el tema y lo busco.');
+    }else enterSong(`¿En qué tema cantan ${A.name} y ${B.name}?`);
+    return;
+  }
   if(G.mode==='spotify'){
     G.phase='checking';renderGame();setMsg(`Buscando ${A.name} con ${B.name} en el catálogo…`);
     let res=[];try{res=await SP.findFeat(A,B);}catch(e){res=null;}
@@ -688,11 +742,31 @@ async function submit(B){
     G.phase='judge';G.pending={b:B};saveG();renderGame();
   }
 }
+function enterSong(msg){
+  G.phase='song';G.paused=false;
+  const t=G.turnBase||0;G.turnMs=t;G.remain=t;G.endsAt=t?Date.now()+t:0;
+  $('#g-song').value='';saveG();renderGame();setMsg(msg);startTick();
+  setTimeout(()=>{if(G&&G.phase==='song')$('#g-song').focus();},60);
+}
+async function submitSong(){
+  if(!G||G.phase!=='song')return;
+  const title=$('#g-song').value.trim().replace(/\s+/g,' ');
+  if(title.length<2)return shakeMsg('Escribe el título del tema.');
+  const A=curBase(),B=G.pending.b;
+  pauseClock();G.pending.title=title;
+  if(G.mode==='spotify'){
+    G.phase='verifying';renderGame();setMsg(`Buscando «${title}»…`);
+    let res=[];try{res=await SP.findSong(A,B,title,G.pending.known);}catch(e){res=[];}
+    if(!G||G.phase!=='verifying')return;
+    if(res.length)success(B,res[0],res);
+    else{G.phase='notfound';saveG();renderGame();setMsg('');}
+  }else{G.phase='judge';saveG();renderGame();setMsg('');}
+}
 async function success(B,track,alts,override){
   const A=curBase(),p=cur();
   if(G.rebote)p.used.rebote=true;
   G.used[key(A,B)]=1;
-  const link={n:G.chain.length+1,a:{id:A.id,name:A.name},b:{id:B.id,name:B.name},track:track||null,alts:alts||null,by:p.id,wild:G.rebote?'rebote':null,override:!!override};
+  const link={n:G.chain.length+1,a:{id:A.id,name:A.name},b:{id:B.id,name:B.name},track:track||null,alts:alts||null,by:p.id,wild:G.rebote?'rebote':null,override:!!override,song:(!track&&G.pending&&G.pending.title)||null};
   G.chain.push(link);p.score++;G.prev=link.a;G.base=link.b;G.fails=0;G.rebote=false;
   if(G.dissArmed)G.halfNext=true;
   G.phase='ok';G.np={track:track||null,by:p.id,artist:track?null:`${A.name} ft. ${B.name}`};
@@ -701,9 +775,9 @@ async function success(B,track,alts,override){
   if(track&&G.mode==='spotify'){G.playState=await SP.play(track.uri).catch(()=>'error');saveG();renderGame();}
 }
 function fail(reason){
-  if(!G||(G.phase!=='turn'&&G.phase!=='notfound'&&G.phase!=='judge'))return;
+  if(!G||!['turn','song','notfound','judge'].includes(G.phase))return;
   const p=cur();if(G.rebote)p.used.rebote=true;G.rebote=false;
-  sugg=[];$('#g-in').value='';
+  sugg=[];$('#g-in').value='';$('#g-song').value='';
   p.lives=Math.max(0,p.lives-1);G.fails++;G.phase='fail';G.pending={reason,out:p.lives===0};
   saveG();renderGame();buzz([60,40,60]);
 }
@@ -714,7 +788,7 @@ function shakeMsg(t){setMsg(t,true);const c=$('#g-credit');c.classList.remove('s
 function renderClock(){
   if(!G)return;const c=$('#g-clock');
   if(!G.turnMs){c.hidden=true;return;}
-  c.hidden=G.phase!=='turn'&&G.phase!=='checking'&&G.phase!=='notfound'&&G.phase!=='judge';
+  c.hidden=!['turn','checking','song','verifying','notfound','judge'].includes(G.phase);
   const left=G.endsAt?Math.max(0,G.endsAt-Date.now()):G.remain;
   const done=G.turnMs-left;
   $('#g-t1').textContent=mmss(done);$('#g-t2').textContent=mmss(G.turnMs);
@@ -749,14 +823,20 @@ function renderGame(){
   inp.disabled=!editable;$('#g-go').disabled=!editable;$('#g-go').hidden=!editable;
   if(!editable)$('#g-sugg').innerHTML='';
   if(G.phase==='ok'){inp.value=G.chain[G.chain.length-1].b.name;}
+  else if(G.pending&&G.pending.b&&['song','verifying','notfound','judge'].includes(G.phase))inp.value=G.pending.b.name;
   $('#g-mic').hidden=!(editable&&SR);
+  const sIn=$('#g-song'),songPh=!!(G.songMode&&G.pending&&['song','verifying','notfound','judge'].includes(G.phase)),okSong=!!(G.songMode&&G.phase==='ok'&&G.chain.length);
+  $('#g-songline').hidden=!(songPh||okSong);
+  const sEdit=G.phase==='song';sIn.disabled=!sEdit;$('#g-go2').hidden=!sEdit;$('#g-mic2').hidden=!(sEdit&&SR);
+  if(okSong){const L=G.chain[G.chain.length-1];sIn.value=L.track?L.track.name:(L.song||'');}
+  else if(songPh&&!sEdit&&G.pending.title!=null)sIn.value=G.pending.title;
   // wildcards
-  const showWild=G.phase==='turn'||G.phase==='checking';
+  const showWild=['turn','checking','song','verifying'].includes(G.phase);
   $('#g-play').hidden=!showWild;
   const lastA=G.prev;
   $('#g-wild').innerHTML=Object.keys(WILD).filter(k=>G.wild[k]).map(k=>{
-    const spent=!!p.used[k];let sub='',on=false,dis=G.phase!=='turn'||spent;
-    if(k==='rebote'){on=G.rebote;sub=lastA?`Usar a ${esc(lastA.name)}`:'Aún no hay nombre anterior';if(!lastA)dis=true;}
+    const spent=!!p.used[k];let sub='',on=false,dis=!(G.phase==='turn'||G.phase==='song')||spent;
+    if(k==='rebote'){on=G.rebote;sub=lastA?`Usar a ${esc(lastA.name)}`:'Aún no hay nombre anterior';if(!lastA||G.phase!=='turn')dis=true;}
     if(k==='prorroga'){sub='+15 s';if(!G.turnMs)dis=true,sub='Sin reloj';}
     if(k==='diss'){on=G.dissArmed;sub=on?'Activado':'Mitad de tiempo al siguiente';}
     return`<button class="wb${spent&&!on?' spent':''}" data-w="${k}" aria-pressed="${on}" ${dis&&!on?'disabled':''}><b>${WILD[k].name}</b><span>${sub}</span></button>`;}).join('');
@@ -780,12 +860,19 @@ function panelHTML(){
       ${nextBtn}`;
   }
   if(G.phase==='fail'){
-    const r=G.pending||{};const why=r.reason==='time'?'Se acabó el tiempo.':r.reason==='giveup'?'Se ha rendido.':'Ese feat no cuela.';
+    const r=G.pending||{};const why=r.reason==='time'?'Se acabó el tiempo.':r.reason==='giveup'?'Se ha rendido.':G.songMode?'Eso no cuela.':'Ese feat no cuela.';
     const out=r.out?`<p class="vsub"><b>${esc(p.name)} se queda sin vidas.</b> Al backstage.</p>`:`<p class="vsub">Pierde una vida. Le quedan <b>${p.lives}</b>.</p>`;
     const al=alive().length;const change=nx&&G.fails>=al;
     return`<p class="verdict bad stamp">${why}</p>${out}
       ${nx?`<p class="vsub">${change?'Nadie ha sacado nada de este artista: <b>cambio de disco</b>.':`El siguiente sigue con <b>${esc(G.base.name)}</b>.`}</p>`:''}
       ${nextBtn}`;
+  }
+  if(G.phase==='notfound'&&G.pending.title!=null){
+    const b=G.pending.b,A=curBase(),t=G.pending.title,had=G.pending.known&&G.pending.known.length;
+    return`<p class="vsub">No encuentro <b>«${esc(t)}»</b> de <b>${esc(A.name)}</b> con <b>${esc(b.name)}</b> en Spotify.${had?' Tienen temas juntos, pero no con ese título.':''} ¿Qué dice el grupo?</p>
+      <div class="row2"><button class="ghost" id="pn-retry">Otro título</button><button class="ghost bad" id="pn-no">No cuela</button></div>
+      <button class="ghost" id="pn-yes">El grupo lo da por bueno</button>
+      <a class="link" href="${esc(spSearch(A.name+' '+b.name,t))}" target="_blank" rel="noopener">Buscarlo yo en Spotify</a>`;
   }
   if(G.phase==='notfound'){
     const b=G.pending.b,A=curBase();
@@ -796,19 +883,19 @@ function panelHTML(){
   }
   if(G.phase==='judge'){
     const b=G.pending.b,A=curBase();
-    return`<p class="vsub">Jurado: ¿existe un tema de <b>${esc(A.name)}</b> con <b>${esc(b.name)}</b>?</p>
-      <div class="field"><label class="mono" for="pn-song">Cuál es (opcional, va a la mixtape)</label><input id="pn-song" maxlength="60" autocomplete="off"></div>
+    const t=G.pending.title;
+    return`<p class="vsub">Jurado: ¿existe ${t!=null?`<b>«${esc(t)}»</b>`:'un tema'} de <b>${esc(A.name)}</b> con <b>${esc(b.name)}</b>?</p>
       <div class="row2"><button class="cta" id="pn-yes">Existe</button><button class="ghost bad" id="pn-no">No cuela</button></div>
-      <div class="row2"><button class="ghost" id="pn-retry">Probar otro</button><a class="ghost" href="${esc(spSearch(A.name,b.name))}" target="_blank" rel="noopener" style="text-decoration:none">Comprobar</a></div>`;
+      <div class="row2"><button class="ghost" id="pn-retry">${t!=null?'Otro título':'Probar otro'}</button><a class="ghost" href="${esc(spSearch(A.name+' '+b.name,t||''))}" target="_blank" rel="noopener" style="text-decoration:none">Comprobar</a></div>`;
   }
   return'';
 }
 function wirePanel(){
   const on=(id,f)=>{const el=$('#'+id);if(el)el.onclick=f;};
   on('pn-next',()=>{if(G.phase==='ok'||G.phase==='fail')nextTurn();});
-  on('pn-retry',()=>{G.phase='turn';G.pending=null;resumeClock();$('#g-in').value='';saveG();renderGame();setMsg('Prueba con otro nombre.');$('#g-in').focus();});
+  on('pn-retry',()=>{const back=!!(G.songMode&&G.pending&&G.pending.title!=null);G.phase=back?'song':'turn';if(back){$('#g-song').value='';}else{G.pending=null;$('#g-in').value='';}resumeClock();saveG();renderGame();setMsg(back?'Prueba con otro título.':'Prueba con otro nombre.');(back?$('#g-song'):$('#g-in')).focus();});
   on('pn-no',()=>{G.phase=G.phase==='judge'?'judge':'notfound';fail('wrong');});
-  on('pn-yes',()=>{const b=G.pending.b;const song=$('#pn-song')?$('#pn-song').value.trim():'';success(b,null,null,G.mode==='spotify');if(song){G.chain[G.chain.length-1].song=song;saveG();renderGame();}});
+  on('pn-yes',()=>{success(G.pending.b,null,null,G.mode==='spotify');});
   document.querySelectorAll('#g-panel [data-alt]').forEach(btn=>btn.onclick=async()=>{const L=G.chain[G.chain.length-1];const t=L.alts[+btn.dataset.alt];L.track=t;G.np.track=t;saveG();renderGame();if(G.mode==='spotify'){G.playState=await SP.play(t.uri).catch(()=>'error');saveG();renderGame();}});
 }
 function renderChain(){
@@ -860,8 +947,8 @@ $('#g-sugg').addEventListener('click',e=>{const b=e.target.closest('[data-i]');i
 
 /* wildcards */
 $('#g-wild').addEventListener('click',e=>{
-  const b=e.target.closest('[data-w]');if(!b||!G||G.phase!=='turn')return;const k=b.dataset.w,p=cur();
-  if(k==='rebote'){if(p.used.rebote||!G.prev)return;G.rebote=!G.rebote;setMsg(G.rebote?`Rebote: ahora buscas un feat de ${G.prev.name}.`:'');}
+  const b=e.target.closest('[data-w]');if(!b||!G||(G.phase!=='turn'&&G.phase!=='song'))return;const k=b.dataset.w,p=cur();
+  if(k==='rebote'){if(G.phase!=='turn'||p.used.rebote||!G.prev)return;G.rebote=!G.rebote;setMsg(G.rebote?`Rebote: ahora buscas un feat de ${G.prev.name}.`:'');}
   if(k==='prorroga'){if(p.used.prorroga||!G.turnMs)return;p.used.prorroga=true;G.turnMs+=15000;if(G.endsAt)G.endsAt+=15000;else G.remain+=15000;setMsg('Prórroga: quince segundos más.');}
   if(k==='diss'){if(p.used.diss)return;p.used.diss=true;G.dissArmed=true;setMsg('Diss activado. Si aciertas, el siguiente va con la mitad de tiempo.');}
   buzz(15);saveG();renderGame();drawSugg();
@@ -871,22 +958,26 @@ $('#g-giveup').onclick=()=>fail('giveup');
 /* voice */
 const SR=!IN_ARTIFACT&&(window.SpeechRecognition||window.webkitSpeechRecognition);
 let rec=null;
-$('#g-mic').onclick=()=>{
+function startMic(btn,input,done){
   if(!SR)return;if(rec){rec.stop();return;}
   rec=new SR();rec.lang='es-ES';rec.interimResults=true;rec.maxAlternatives=1;
-  $('#g-mic').classList.add('rec');
-  rec.onresult=e=>{const t=[...e.results].map(r=>r[0].transcript).join(' ').trim();inp.value=t;if(e.results[e.results.length-1].isFinal)suggest(t);};
-  rec.onend=()=>{rec=null;$('#g-mic').classList.remove('rec');};
+  btn.classList.add('rec');
+  rec.onresult=e=>{const t=[...e.results].map(r=>r[0].transcript).join(' ').trim();input.value=t;if(e.results[e.results.length-1].isFinal&&done)done(t);};
+  rec.onend=()=>{rec=null;btn.classList.remove('rec');};
   rec.onerror=()=>{toast('No te he oído. Prueba a escribirlo.');};
-  try{rec.start();}catch(e){rec=null;$('#g-mic').classList.remove('rec');}
-};
+  try{rec.start();}catch(e){rec=null;btn.classList.remove('rec');}
+}
+$('#g-mic').onclick=()=>startMic($('#g-mic'),inp,t=>suggest(t));
+$('#g-mic2').onclick=()=>startMic($('#g-mic2'),$('#g-song'),null);
+$('#g-song').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();submitSong();}});
+$('#g-go2').onclick=submitSong;
 
 /* ================= pause ================= */
 function openPause(){
   if(!G)return;pauseClock();
   $('#pause-mode').textContent=G.mode==='spotify'?'Spotify':'Modo jurado';
   $('#pause-rules').innerHTML=[
-    'Di un <b>feat del artista que sale arriba</b>: una canción suya con otro artista.',
+    G.songMode?'Di un <b>feat del artista que sale arriba</b>: con quién canta y <b>en qué canción</b>.':'Di un <b>feat del artista que sale arriba</b>: una canción suya con otro artista.',
     'Si existe, suena y el siguiente tira del <b>nombre nuevo</b>.',
     '<b>Nada de back2back</b>: una pareja que ya ha sonado no se repite.',
     'Tiempo agotado, rendirse o un feat que no existe: <b>una vida menos</b>.',
@@ -934,7 +1025,7 @@ $('#o-copy').onclick=()=>{
 /* ================= boot ================= */
 (async function boot(){
   if(CAN_SPOTIFY)await SP.callback();
-  if(G){if(G.phase==='checking')G.phase='turn';if(G.phase==='turn'){G.remain=G.turnMs;G.endsAt=0;G.paused=true;}saveG();}
+  if(G){if(G.phase==='checking')G.phase='turn';if(G.phase==='verifying')G.phase='song';if(G.phase==='turn'||G.phase==='song'){G.remain=G.turnMs;G.endsAt=0;G.paused=true;}saveG();}
   renderHome();show('scr-home');
   if(!ls.get('fa.intro'))openIntro();
 })();
