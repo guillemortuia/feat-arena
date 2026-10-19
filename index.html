@@ -256,6 +256,10 @@ h2.h{font:900 34px/.95 var(--f-wide);font-stretch:125%;text-transform:uppercase;
 .steps li::before{content:counter(s);font:500 12px/1.9 var(--f-mono);color:var(--p)}
 .steps li b{color:var(--bone)}
 .steps a{color:var(--bone)}
+.count{position:fixed;inset:0;z-index:80;background:var(--night);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:0 max(18px,env(safe-area-inset-right,0px)) 0 max(18px,env(safe-area-inset-left,0px));text-align:center}
+.count .n{font:900 min(72vw,440px)/.8 var(--f-wide);font-stretch:125%;letter-spacing:-.04em;color:var(--p)}
+.count .n.word{font-size:min(19vw,120px);line-height:.95;letter-spacing:-.02em}
+.count .sub{font:italic 500 20px/1.2 var(--f-ital);color:var(--dust)}
 .toast{position:fixed;left:50%;top:calc(12px + env(safe-area-inset-top,0px));z-index:90;transform:translate(-50%,-14px);opacity:0;pointer-events:none;width:max-content;max-width:calc(100% - 32px);background:var(--bone);color:var(--ink);padding:11px 16px;border-radius:12px;font:600 14px/1.35 var(--f-wide);transition:opacity .2s,transform .2s;text-align:center}
 .toast.in{opacity:1;transform:translate(-50%,0)}
 </style>
@@ -263,7 +267,7 @@ h2.h{font:900 34px/.95 var(--f-wide);font-stretch:125%;text-transform:uppercase;
 <!-- ================= HOME ================= -->
 <section class="screen" id="scr-home">
   <div class="wrap">
-    <div class="cat"><span class="mono">FA-010 · ℗ 2026</span><span class="mono">El Invitado Records</span></div>
+    <div class="cat"><span class="mono">FA-011 · ℗ 2026</span><span class="mono">El Invitado Records</span></div>
     <h1 class="logo" aria-label="Feat Arena"><span class="w" aria-hidden="true">Feat</span><span class="w out" aria-hidden="true">Arena</span><span class="ft" aria-hidden="true">ft.</span></h1>
     <p class="tagline">Suena un tema. Tú dices con quién ha colaborado el artista y en qué canción. El siguiente sigue la cadena.</p>
     <ol class="credits" aria-label="Así suena una partida">
@@ -377,10 +381,15 @@ h2.h{font:900 34px/.95 var(--f-wide);font-stretch:125%;text-transform:uppercase;
     <div class="cat"><span class="mono" id="warm-t">Prueba de sonido</span><button class="link" id="warm-x" style="padding:0">Cancelar</button></div>
     <div class="sheet-box" style="margin-top:28px">
       <div class="host" style="margin-top:0"><div class="label spin" aria-hidden="true"><span>ft.</span></div><div><b>Antes de pinchar</b><span class="r" id="warm-st" aria-live="polite">Todavía no oigo nada.</span></div></div>
-      <p class="vsub" style="margin-top:18px">Toca el botón, dale al play en Spotify y vuelve aquí. En cuanto la oiga, empiezo la partida.</p>
+      <ol class="steps" style="margin-top:18px">
+        <li><span><b>Toca «Pinchar la intro».</b> Se abrirá Spotify con la canción.</span></li>
+        <li><span><b>Dale al play</b> en Spotify.</span></li>
+        <li><span><b>Vuelve a esta pantalla.</b> En cuanto oiga la música, arranca la cuenta atrás.</span></li>
+      </ol>
     </div>
     <div class="stack" style="margin-top:16px">
       <a class="cta" href="https://open.spotify.com/track/3MrRksHupTVEQ7YbA0FsZK" target="_blank" rel="noopener" style="text-decoration:none;flex-direction:column;gap:6px"><span>Pinchar la intro</span><span style="font:italic 500 15px/1 var(--f-ital);text-transform:none;letter-spacing:0">The Final Countdown · Europe</span></a>
+      <p class="mono" style="text-align:center;color:var(--dust);margin:2px 0 6px">↩ Tras darle al play, vuelve aquí</p>
       <button class="ghost" id="warm-skip">Empezar igualmente</button>
     </div>
   </div>
@@ -409,6 +418,7 @@ h2.h{font:900 34px/.95 var(--f-wide);font-stretch:125%;text-transform:uppercase;
   </div>
 </section>
 
+<div class="count" id="count" hidden aria-live="assertive"><span class="sub" id="count-sub">The Final Countdown</span><span class="n" id="count-n">3</span></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
@@ -475,7 +485,7 @@ const SP={
   lastErr:'',
   async diag(){
     const L=[];const em=r=>r&&r.data&&r.data.error?(r.data.error.reason||r.data.error.message||''):'';
-    L.push('Versión: FA-010');L.push('Dirección: '+location.origin+location.pathname);
+    L.push('Versión: FA-011');L.push('Dirección: '+location.origin+location.pathname);
     L.push('Móvil: '+(/iPhone|iPad/.test(navigator.userAgent)?'iPhone':/Android/.test(navigator.userAgent)?'Android':'otro')+' · '+(navigator.userAgent.match(/(CriOS|FxiOS|EdgiOS|Chrome|Firefox|Version)\/[\d.]+/)||[''])[0]);
     if(!this.ready){L.push('Spotify: no conectado');return L.join('\n');}
     try{
@@ -722,10 +732,11 @@ async function introCountdown(cb){
   const isIntro=warmItem&&(warmItem.uri===INTRO_URI||/final countdown/i.test(warmItem.name||''));
   if(!isIntro){$('#ov-warm').hidden=true;cb();return;}
   if(warmItem.uri===INTRO_URI||(warmItem.duration_ms||0)>INTRO_RIFF_MS)await SP.api('/me/player/seek?position_ms='+INTRO_RIFF_MS+(SP.dev?'&device_id='+encodeURIComponent(SP.dev):''),{method:'PUT'}).catch(()=>{});
-  const st=$('#warm-st');let n=3;
-  st.textContent='¡Que empiece la cuenta atrás!';
-  const step=Math.round(INTRO_HOLD_MS/4);
-  const tick=setInterval(()=>{if(n>0){st.textContent=n+'…';buzz(15);n--;}else{clearInterval(tick);st.textContent='¡A pinchar!';setTimeout(()=>{$('#ov-warm').hidden=true;cb();},500);}},step);
+  const box=$('#count'),num=$('#count-n'),sub=$('#count-sub');
+  const show=(t,word)=>{num.textContent=t;num.classList.toggle('word',!!word);num.classList.remove('stamp');void num.offsetWidth;num.classList.add('stamp');};
+  $('#ov-warm').hidden=true;box.hidden=false;sub.textContent='The Final Countdown';show('Que empiece',true);
+  let n=3;const step=Math.round(INTRO_HOLD_MS/4);
+  const tick=setInterval(()=>{if(n>0){show(String(n));buzz(25);n--;}else{clearInterval(tick);sub.textContent='Feat Arena';show('¡A pinchar!',true);buzz([40,40,80]);setTimeout(()=>{box.hidden=true;cb();},900);}},step);
 }
 async function warmup(cb){
   if(warmBusy)return;warmBusy=true;
@@ -1142,7 +1153,7 @@ async function checkUpdate(){
   if(IN_ARTIFACT||location.protocol==='file:')return;
   try{
     const r=await fetch(location.pathname+'?t='+Date.now(),{cache:'no-store'});const t=await r.text();
-    const m=t.match(/FA-(\d{3}) · ℗/),mine=10;
+    const m=t.match(/FA-(\d{3}) · ℗/),mine=11;
     if(m&&+m[1]>mine&&(!G||G.phase==='over'||G.paused)){location.replace(location.pathname+'?v='+m[1]);}
   }catch(e){}
 }
