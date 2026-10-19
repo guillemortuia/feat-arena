@@ -328,7 +328,7 @@ h2.h{font:900 34px/.95 var(--f-wide);font-stretch:125%;text-transform:uppercase;
 <!-- ================= HOME ================= -->
 <section class="screen" id="scr-home">
   <div class="wrap">
-    <div class="cat"><span class="mono">FA-015 · ℗ 2026</span><span class="mono">El Invitado Records</span></div>
+    <div class="cat"><span class="mono">FA-016 · ℗ 2026</span><span class="mono">El Invitado Records</span></div>
     <h1 class="logo" aria-label="Feat Arena"><span class="w" aria-hidden="true">Feat</span><span class="w out" aria-hidden="true">Arena</span><span class="ft" aria-hidden="true">ft.</span></h1>
     <p class="tagline">Suena un tema. Tú dices con quién ha colaborado el artista y en qué canción. El siguiente sigue la cadena.</p>
     <ol class="credits" aria-label="Así suena una partida">
@@ -549,7 +549,7 @@ const SP={
   lastErr:'',
   async diag(){
     const L=[];const em=r=>r&&r.data&&r.data.error?(r.data.error.reason||r.data.error.message||''):'';
-    L.push('Versión: FA-015');L.push('Dirección: '+location.origin+location.pathname);
+    L.push('Versión: FA-016');L.push('Dirección: '+location.origin+location.pathname);
     L.push('Móvil: '+(/iPhone|iPad/.test(navigator.userAgent)?'iPhone':/Android/.test(navigator.userAgent)?'Android':'otro')+' · '+(navigator.userAgent.match(/(CriOS|FxiOS|EdgiOS|Chrome|Firefox|Version)\/[\d.]+/)||[''])[0]);
     if(!this.ready){L.push('Spotify: no conectado');return L.join('\n');}
     try{
@@ -559,7 +559,10 @@ const SP={
       L.push('Dispositivos: '+(dv.ok?((dv.data.devices||[]).map(d=>`${d.name} (${d.type}${d.is_active?', activo':''}${d.is_restricted?', restringido':''})`).join(' | ')||'ninguno'):'error '+dv.status+' '+em(dv)));
       const pl=await this.api('/me/player');
       L.push('Sonando: '+(pl.status===204?'nada':pl.ok?((pl.data.item&&pl.data.item.name)||'—')+' en '+((pl.data.device&&pl.data.device.name)||'?'):'error '+pl.status+' '+em(pl)));
+      const fs=await this.api('/search?type=track&limit=1&q='+encodeURIComponent('artist:"Shakira"'));
+      L.push('Búsqueda con filtro: '+(fs.ok?'OK':'error '+fs.status+' '+em(fs)));
       const sr=await this.api('/search?type=track&limit=1&q='+encodeURIComponent('Flashing Lights Kanye West'));
+      L.push('Búsqueda simple: '+(sr.ok?'OK':'error '+sr.status+' '+em(sr)));
       const it=sr.data&&sr.data.tracks&&sr.data.tracks.items&&sr.data.tracks.items[0];
       if(!it)L.push('Búsqueda: error '+sr.status+' '+em(sr));
       else{if(it.album&&it.album.uri)ALBUM[it.uri]=it.album.uri;const res=await this.play(it.uri);L.push('Prueba de sonido: '+(res==='ok'?'orden aceptada':res+' · '+this.lastErr));
@@ -582,7 +585,7 @@ const SP={
     if(r.status===401&&!retry){this.tok.exp=0;return this.api(path,opt,1);}
     if(r.status===429&&retry<2){const s=Math.min(5,+(r.headers.get('Retry-After')||1));await new Promise(k=>setTimeout(k,s*1000));return this.api(path,opt,retry+1);}
     let data=null;if((r.headers.get('content-type')||'').includes('json')){try{data=await r.json();}catch(e){}}
-    if(!r.ok)this.lastApi=path.split('?')[0]+' '+r.status;
+    if(!r.ok){const e=data&&data.error;this.lastApi=path.split('?')[0]+' '+r.status+(e&&(e.message||e.reason)?' · '+(e.reason||e.message):'');}
     return{status:r.status,ok:r.ok,data};
   },
   async artists(q){const r=await this.api('/search?type=artist&limit=7&q='+encodeURIComponent(q));return(r.data&&r.data.artists&&r.data.artists.items||[]).map(a=>({id:a.id,name:a.name,img:imgOf(a.images,64)}));},
@@ -615,8 +618,10 @@ const SP={
   async randomTrack(names){
     for(let i=0;i<5;i++){
       const name=pick(names);
-      const r=await this.api('/search?type=track&limit=10&q='+encodeURIComponent(`artist:"${name}"`));
-      const items=(r.data&&r.data.tracks&&r.data.tracks.items||[]).filter(t=>t.artists&&norm(t.artists[0].name)===norm(name));
+      let r=await this.api('/search?type=track&limit=10&q='+encodeURIComponent(`artist:"${name}"`));
+      if(!r.ok)r=await this.api('/search?type=track&limit=10&q='+encodeURIComponent(name));
+      let items=(r.data&&r.data.tracks&&r.data.tracks.items||[]).filter(t=>t.artists&&norm(t.artists[0].name)===norm(name));
+      if(!items.length)items=(r.data&&r.data.tracks&&r.data.tracks.items||[]).filter(t=>t.artists&&t.artists.some(a=>norm(a.name)===norm(name)));
       if(items.length)return trackOf(pick(items));
     }
     return null;
@@ -1346,7 +1351,7 @@ async function checkUpdate(){
   if(IN_ARTIFACT||location.protocol==='file:')return;
   try{
     const r=await fetch(location.pathname+'?t='+Date.now(),{cache:'no-store'});const t=await r.text();
-    const m=t.match(/FA-(\d{3}) · ℗/),mine=15;
+    const m=t.match(/FA-(\d{3}) · ℗/),mine=16;
     if(m&&+m[1]>mine&&(!G||G.phase==='over'||G.paused)){location.replace(location.pathname+'?v='+m[1]);}
   }catch(e){}
 }
