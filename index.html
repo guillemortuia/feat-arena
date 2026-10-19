@@ -263,7 +263,7 @@ h2.h{font:900 34px/.95 var(--f-wide);font-stretch:125%;text-transform:uppercase;
 <!-- ================= HOME ================= -->
 <section class="screen" id="scr-home">
   <div class="wrap">
-    <div class="cat"><span class="mono">FA-003 · ℗ 2026</span><span class="mono">El Invitado Records</span></div>
+    <div class="cat"><span class="mono">FA-004 · ℗ 2026</span><span class="mono">El Invitado Records</span></div>
     <h1 class="logo" aria-label="Feat Arena"><span class="w" aria-hidden="true">Feat</span><span class="w out" aria-hidden="true">Arena</span><span class="ft" aria-hidden="true">ft.</span></h1>
     <p class="tagline">Suena un tema. Tú dices con quién ha colaborado el artista y en qué canción. El siguiente sigue la cadena.</p>
     <ol class="credits" aria-label="Así suena una partida">
@@ -456,7 +456,27 @@ const SP={
       this.save(d);toast('Spotify conectado.');
     }catch(e){toast('No se pudo conectar con Spotify. Revisa el Client ID y la URI de redirección.');}
   },
-  save(d){this.tok={access:d.access_token,refresh:d.refresh_token||(this.tok&&this.tok.refresh),exp:Date.now()+(d.expires_in||3600)*1000};ls.set('fa.tok',this.tok);},
+  save(d){this.tok={access:d.access_token,refresh:d.refresh_token||(this.tok&&this.tok.refresh),exp:Date.now()+(d.expires_in||3600)*1000,scope:d.scope||(this.tok&&this.tok.scope)||''};ls.set('fa.tok',this.tok);},
+  lastErr:'',
+  async diag(){
+    const L=[];const em=r=>r&&r.data&&r.data.error?(r.data.error.reason||r.data.error.message||''):'';
+    L.push('Versión: FA-004');L.push('Dirección: '+location.origin+location.pathname);
+    L.push('Móvil: '+(/iPhone|iPad/.test(navigator.userAgent)?'iPhone':/Android/.test(navigator.userAgent)?'Android':'otro')+' · '+(navigator.userAgent.match(/(CriOS|FxiOS|EdgiOS|Chrome|Firefox|Version)\/[\d.]+/)||[''])[0]);
+    if(!this.ready){L.push('Spotify: no conectado');return L.join('\n');}
+    try{
+      const me=await this.api('/me');L.push('Cuenta: '+(me.ok?(me.data.display_name||me.data.id):'error '+me.status+' '+em(me)));
+      L.push('Permisos: '+(this.tok.scope||'(sin dato, vuelve a conectar)'));
+      const dv=await this.api('/me/player/devices');
+      L.push('Dispositivos: '+(dv.ok?((dv.data.devices||[]).map(d=>`${d.name} (${d.type}${d.is_active?', activo':''}${d.is_restricted?', restringido':''})`).join(' | ')||'ninguno'):'error '+dv.status+' '+em(dv)));
+      const pl=await this.api('/me/player');
+      L.push('Sonando: '+(pl.status===204?'nada':pl.ok?((pl.data.item&&pl.data.item.name)||'—')+' en '+((pl.data.device&&pl.data.device.name)||'?'):'error '+pl.status+' '+em(pl)));
+      const sr=await this.api('/search?type=track&limit=1&q='+encodeURIComponent('Flashing Lights Kanye West'));
+      const it=sr.data&&sr.data.tracks&&sr.data.tracks.items&&sr.data.tracks.items[0];
+      if(!it)L.push('Búsqueda: error '+sr.status+' '+em(sr));
+      else{const res=await this.play(it.uri);L.push('Prueba de sonido: '+(res==='ok'?'OK, suena':res+' · '+this.lastErr));}
+    }catch(e){L.push('Error: '+(e&&e.message||e));}
+    return L.join('\n');
+  },
   logout(){this.tok=null;ls.del('fa.tok');},
   async access(){
     if(!this.tok)throw new Error('auth');
@@ -506,10 +526,13 @@ const SP={
   async play(uri){
     const body=JSON.stringify({uris:[uri]});
     const go=dev=>this.api('/me/player/play'+(dev?'?device_id='+encodeURIComponent(dev):''),{method:'PUT',body});
+    const em=x=>x&&x.data&&x.data.error?(x.data.error.reason||x.data.error.message||''):'';
     let r=await go(this.dev);
-    if(r.ok)return'ok';
+    if(r.ok){this.lastErr='';return'ok';}
+    this.lastErr=`play ${r.status} ${em(r)}`.trim();
     if(r.status===403)return'premium';
     const d=await this.api('/me/player/devices');
+    this.lastErr+=` · devices ${d.status} (${(d.data&&d.data.devices||[]).length})`;
     const list=(d.data&&d.data.devices||[]).filter(x=>!x.is_restricted);
     const dev=list.find(x=>x.is_active)||list.find(x=>/smartphone/i.test(x.type))||list[0];
     if(!dev){this.dev=null;return'nodevice';}
@@ -518,6 +541,7 @@ const SP={
       await this.api('/me/player',{method:'PUT',body:JSON.stringify({device_ids:[dev.id],play:false})});
       await new Promise(k=>setTimeout(k,500));r=await go(dev.id);
     }
+    if(!r.ok)this.lastErr+=` · play2 ${r.status} ${em(r)}`;
     if(r.status===403)return'premium';
     return r.ok?'ok':'error';
   },
@@ -610,8 +634,13 @@ function openSpotify(){
   }else if(!CAN_SPOTIFY){
     b.innerHTML=`<p class="vsub">Para conectar Spotify, Feat Arena tiene que abrirse desde una dirección <b>https</b>. Mientras tanto se juega en modo jurado.</p>`;
   }else if(SP.ready){
-    b.innerHTML=`<p class="vsub"><b>Spotify conectado.</b> Los feats se comprueban en el catálogo y suenan en tu móvil. Para que suene, deja la app de Spotify abierta en segundo plano. Hace falta Premium.</p><div class="stack" style="margin-top:16px"><button class="ghost bad" id="sp-out">Desconectar</button></div>`;
+    b.innerHTML=`<p class="vsub"><b>Spotify conectado.</b> Los feats se comprueban en el catálogo y suenan en tu móvil. Para que suene, deja la app de Spotify abierta en segundo plano. Hace falta Premium.</p>
+      <div class="stack" style="margin-top:16px"><button class="cta" id="sp-test">Probar el sonido</button></div>
+      <div id="sp-diag" hidden style="margin-top:14px"><div class="code" id="sp-diag-t" style="white-space:pre-wrap;font-size:12px"></div><button class="ghost" id="sp-diag-c" style="margin-top:10px">Copiar el diagnóstico</button></div>
+      <div class="stack" style="margin-top:10px"><button class="ghost bad" id="sp-out">Desconectar</button></div>`;
     $('#sp-out').onclick=()=>{SP.logout();openSpotify();renderHome();};
+    $('#sp-test').onclick=async()=>{const bt=$('#sp-test');bt.disabled=true;bt.textContent='Probando…';const txt=await SP.diag();$('#sp-diag').hidden=false;$('#sp-diag-t').textContent=txt;bt.disabled=false;bt.textContent='Probar otra vez';};
+    $('#sp-diag-c').onclick=()=>{const t=$('#sp-diag-t').textContent;if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(()=>toast('Diagnóstico copiado.'),()=>toast('Selecciónalo y cópialo a mano.'));else toast('Selecciónalo y cópialo a mano.');};
   }else{
     b.innerHTML=`<p class="vsub">Conecta tu cuenta para que los feats se comprueben solos y cada acierto suene en Spotify. Hace falta <b>Premium</b> en la cuenta que conecta.</p>
       <ol class="steps">
@@ -833,7 +862,7 @@ function renderGame(){
   const bn=$('#g-banner');
   if(G.mode==='spotify'&&G.playState&&G.playState!=='ok'&&G.np&&G.np.track){
     const t=G.np.track;
-    bn.innerHTML=`<div class="banner">${G.playState==='nodevice'?'<span><b>Spotify no está abierto en este móvil.</b> Toca «Abrir en Spotify», dale al play y vuelve aquí. El juego lo detecta solo y a partir de ahí todo suena sin tocar nada.</span>':G.playState==='premium'?'<span><b>Para que suene solo hace falta Premium.</b> Puedes abrir cada tema a mano.</span>':'<span><b>No he podido ponerlo.</b> Ábrelo en Spotify o reinténtalo.</span>'}<div class="row2"><a class="cta" href="${esc(t.url||'#')}" target="_blank" rel="noopener" style="text-decoration:none;min-height:50px;font-size:14px">Abrir en Spotify</a><button class="ghost" id="g-retry">Reintentar</button></div></div>`;
+    bn.innerHTML=`<div class="banner">${G.playState==='nodevice'?'<span><b>Spotify no está abierto en este móvil.</b> Toca «Abrir en Spotify», dale al play y vuelve aquí. El juego lo detecta solo y a partir de ahí todo suena sin tocar nada.</span>':G.playState==='premium'?'<span><b>Para que suene solo hace falta Premium.</b> Puedes abrir cada tema a mano.</span>':'<span><b>No he podido ponerlo.</b> Ábrelo en Spotify o reinténtalo.</span>'}<div class="row2"><a class="cta" href="${esc(t.url||'#')}" target="_blank" rel="noopener" style="text-decoration:none;min-height:50px;font-size:14px">Abrir en Spotify</a><button class="ghost" id="g-retry">Reintentar</button></div>${SP.lastErr?`<span class="mono" style="font-size:10.5px;color:var(--dim)">Código: ${esc(SP.lastErr)}</span>`:''}</div>`;
     $('#g-retry').onclick=()=>retryPlay(true);
   }else bn.innerHTML='';
   // turn & credit
