@@ -292,6 +292,9 @@ h2.h{font:900 34px/.95 var(--f-wide);font-stretch:125%;text-transform:uppercase;
 .nameplate{padding-bottom:18px;min-width:0}
 .nameplate b{display:block;font:900 20px/1 var(--f-wide);font-stretch:125%;text-transform:uppercase}
 .nameplate span{display:block;font:italic 500 15px/1.3 var(--f-ital);color:var(--dust);margin-top:5px}
+.prow .host-svg{width:34px;height:auto}
+.prow .bot-n{font:800 18px/1 var(--f-wide);font-stretch:115%;text-transform:uppercase}
+.prow .bot-n small{display:block;font:500 11px/1.4 var(--f-mono);letter-spacing:.08em;color:var(--dust);margin-top:4px}
 .say{display:grid;grid-template-columns:78px minmax(0,1fr);gap:12px;align-items:start}
 .say .host-svg{width:78px;height:auto}
 /* countdown */
@@ -325,7 +328,7 @@ h2.h{font:900 34px/.95 var(--f-wide);font-stretch:125%;text-transform:uppercase;
 <!-- ================= HOME ================= -->
 <section class="screen" id="scr-home">
   <div class="wrap">
-    <div class="cat"><span class="mono">FA-013 · ℗ 2026</span><span class="mono">El Invitado Records</span></div>
+    <div class="cat"><span class="mono">FA-015 · ℗ 2026</span><span class="mono">El Invitado Records</span></div>
     <h1 class="logo" aria-label="Feat Arena"><span class="w" aria-hidden="true">Feat</span><span class="w out" aria-hidden="true">Arena</span><span class="ft" aria-hidden="true">ft.</span></h1>
     <p class="tagline">Suena un tema. Tú dices con quién ha colaborado el artista y en qué canción. El siguiente sigue la cadena.</p>
     <ol class="credits" aria-label="Así suena una partida">
@@ -347,9 +350,14 @@ h2.h{font:900 34px/.95 var(--f-wide);font-stretch:125%;text-transform:uppercase;
   <div class="wrap">
     <div class="bar-top"><button class="back" data-go="home"><svg width="10" height="18" viewBox="0 0 10 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.5 1.5L1.5 9l7 7.5"/></svg>Inicio</button><span class="mono" id="set-mode"></span></div>
     <h2 class="h">Nueva<br>partida</h2>
+    <div class="sec-t"><span class="mono">Modo</span></div>
+    <div class="seg" id="set-solo" role="group" aria-label="Modo"><button data-v="0">En grupo</button><button data-v="1">Contra El Invitado</button></div>
+    <p class="note" id="set-solo-note"></p>
     <div class="sec-t"><span class="mono">Jugadores</span><span class="mono" id="set-count"></span></div>
     <div class="players" id="set-players"></div>
     <button class="add" id="set-add" style="margin-top:8px"><span aria-hidden="true">+</span> Añadir jugador</button>
+    <div id="set-level-wrap" hidden><div class="sec-t"><span class="mono">Nivel del Invitado</span></div>
+    <div class="seg" id="set-level" role="group" aria-label="Nivel"><button data-v="facil">Fácil</button><button data-v="normal">Normal</button><button data-v="leyenda">Leyenda</button></div><p class="note" id="set-level-note"></p></div>
     <div class="sec-t"><span class="mono">Vidas</span></div>
     <div class="seg" id="set-lives" role="group" aria-label="Vidas"><button data-v="2">2</button><button data-v="3">3</button><button data-v="5">5</button></div>
     <div class="sec-t"><span class="mono">Tiempo por turno</span></div>
@@ -541,7 +549,7 @@ const SP={
   lastErr:'',
   async diag(){
     const L=[];const em=r=>r&&r.data&&r.data.error?(r.data.error.reason||r.data.error.message||''):'';
-    L.push('Versión: FA-013');L.push('Dirección: '+location.origin+location.pathname);
+    L.push('Versión: FA-015');L.push('Dirección: '+location.origin+location.pathname);
     L.push('Móvil: '+(/iPhone|iPad/.test(navigator.userAgent)?'iPhone':/Android/.test(navigator.userAgent)?'Android':'otro')+' · '+(navigator.userAgent.match(/(CriOS|FxiOS|EdgiOS|Chrome|Firefox|Version)\/[\d.]+/)||[''])[0]);
     if(!this.ready){L.push('Spotify: no conectado');return L.join('\n');}
     try{
@@ -574,9 +582,18 @@ const SP={
     if(r.status===401&&!retry){this.tok.exp=0;return this.api(path,opt,1);}
     if(r.status===429&&retry<2){const s=Math.min(5,+(r.headers.get('Retry-After')||1));await new Promise(k=>setTimeout(k,s*1000));return this.api(path,opt,retry+1);}
     let data=null;if((r.headers.get('content-type')||'').includes('json')){try{data=await r.json();}catch(e){}}
+    if(!r.ok)this.lastApi=path.split('?')[0]+' '+r.status;
     return{status:r.status,ok:r.ok,data};
   },
   async artists(q){const r=await this.api('/search?type=artist&limit=7&q='+encodeURIComponent(q));return(r.data&&r.data.artists&&r.data.artists.items||[]).map(a=>({id:a.id,name:a.name,img:imgOf(a.images,64)}));},
+  async botCandidates(A,used){
+    const q=(s,off)=>this.api(`/search?type=track&limit=10&offset=${off||0}&q=`+encodeURIComponent(s)).then(r=>r.data&&r.data.tracks&&r.data.tracks.items||[]).catch(()=>[]);
+    const sets=await Promise.all([q(`artist:"${A.name}"`,0),q(`artist:"${A.name}"`,10),q(`artist:"${A.name}"`,20),q(`${A.name} feat`,0),q(`${A.name} ft`,10)]);
+    const out=[],seen=new Set();
+    sets.flat().forEach(t=>{if(!t||!t.artists)return;const ids=t.artists.map(a=>a.id);if(!ids.includes(A.id))return;
+      t.artists.forEach(b=>{if(b.id===A.id||seen.has(b.id))return;if(used[[A.id,b.id].sort().join('~')])return;seen.add(b.id);out.push({b:{id:b.id,name:b.name},track:trackOf(t)});});});
+    return out;
+  },
   async findSong(A,B,title,known){
     const hit=(known||[]).filter(t=>titleMatch(title,t.name));
     if(hit.length)return hit;
@@ -675,7 +692,7 @@ function trackOf(t){if(t.album&&t.album.uri)ALBUM[t.uri]=t.album.uri;return{albu
 const spSearch=(a,b)=>'https://open.spotify.com/search/'+encodeURIComponent(a+' '+b);
 
 /* ================= state ================= */
-const defCfg={players:['',''],lives:3,time:20,pack:'mix',song:true,wild:{rebote:true,prorroga:true,diss:true}};
+const defCfg={players:['',''],lives:3,time:20,pack:'mix',song:true,solo:false,level:'normal',wild:{rebote:true,prorroga:true,diss:true}};
 let cfg=Object.assign({},defCfg,ls.get('fa.cfg')||{});cfg.wild=Object.assign({},defCfg.wild,cfg.wild||{});
 let G=ls.get('fa.game');if(G&&G.phase==='over')G=null;
 const saveG=()=>{if(G)ls.set('fa.game',G);else ls.del('fa.game');};
@@ -749,7 +766,11 @@ const pickS=(a,n)=>a[Math.abs(n)%a.length];
 const QUIP={ok:['Eso sí que es un feat.','Lo pincho ya mismo.','Buen oído. Esa la tengo en vinilo.','Química de estudio, sí señor.','Ni yo lo habría dicho mejor.'],
   wrong:['Ese feat no lo firma nadie.','Eso no existe ni en un remix pirata.','Me lo apunto para mi próximo disco, porque hoy no existe.'],
   time:['Se te ha comido el reloj.','El silencio también es música, pero no puntúa.'],
-  giveup:['Rendirse es cosa de solistas.','Retirada a tiempo. Más o menos.']};
+  giveup:['Rendirse es cosa de solistas.','Retirada a tiempo. Más o menos.'],
+  think:['Déjame pensar, que tengo muchos discos.','Lo tengo en la punta de la lengua…','Esto me lo sé. Creo.','Un segundo, que repaso mis créditos.'],
+  botok:['¿A que no te lo esperabas?','Ese lo grabé en el estudio de al lado.','Facilito. Te toca.','Apúntatelo para la próxima.'],
+  okvs:['Vale, ese te lo compro.','Buen oído. No me lo pones fácil.','Hmm. Bien jugado.','Te lo tenías guardado, ¿eh?'],
+  blank:['Me he quedado en blanco con %A. Esta te la regalo.','Ni idea con %A. Y mira que he colaborado con todo el mundo.']};
 const INTRO_MOOD=['happy','neutral','doubt','neutral','angry','doubt','wow','happy'];
 const INTRO=[
   'Igual no me conocéis por la cara, pero me habéis oído mil veces. Soy <b>El Invitado</b>.',
@@ -809,10 +830,22 @@ function renderSetup(){
   const m=mode();
   $('#set-mode').textContent=m==='spotify'?'Con Spotify':'Modo jurado';
   if(cfg.pack==='mine'&&m!=='spotify')cfg.pack='mix';
+  const solo=!!(cfg.solo&&m==='spotify');
+  [...$('#set-solo').children].forEach(b=>{b.setAttribute('aria-pressed',String((b.dataset.v==='1')===solo));if(b.dataset.v==='1')b.disabled=m!=='spotify';});
+  $('#set-solo-note').textContent=m!=='spotify'?'Jugar contra El Invitado necesita Spotify conectado: él saca sus feats del catálogo.':solo?'Tú contra El Invitado, por turnos. Él busca sus feats en Spotify y no se deja ganar fácilmente.':'';
+  $('#set-level-wrap').hidden=!solo;
+  [...$('#set-level').children].forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===cfg.level)));
+  $('#set-level-note').textContent=BOT[cfg.level].note;
   const box=$('#set-players');
+  if(solo){
+    box.innerHTML=`<div class="prow"><span class="disc" style="--s:34px;--c:${PRESS[0]}" aria-hidden="true"></span><input id="pl-0" maxlength="16" autocomplete="off" placeholder="Tu nombre" value="${esc(cfg.players[0]||'')}" aria-label="Tu nombre"><span></span></div>
+      <div class="prow">${hostSVG('happy')}<span class="bot-n">El Invitado<small>La máquina · ${BOT[cfg.level].name}</small></span><span></span></div>`;
+    $('#set-count').textContent='1 contra 1';$('#set-add').hidden=true;
+  }else{
   box.innerHTML=cfg.players.map((n,i)=>`<div class="prow"><span class="disc" style="--s:34px;--c:${PRESS[i]}" aria-hidden="true"></span><input id="pl-${i}" maxlength="16" autocomplete="off" placeholder="Jugador ${i+1}" value="${esc(n)}" aria-label="Nombre del jugador ${i+1}"><button class="x" data-rm="${i}" aria-label="Quitar jugador ${i+1}" ${cfg.players.length<=2?'disabled style="visibility:hidden"':''}><svg width="14" height="14" viewBox="0 0 14 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l10 10M12 2L2 12"/></svg></button></div>`).join('');
   $('#set-count').textContent=`${cfg.players.length} de 8`;
   $('#set-add').hidden=cfg.players.length>=8;
+  }
   [['#set-lives','lives'],['#set-time','time']].forEach(([s,k])=>[...$(s).children].forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.v===cfg[k]))));
   const packs=[['mine','Tu Spotify']].concat(['mix','es','us','latin','pop'].map(k=>[k,PACKS[k].name]));
   $('#set-pack').innerHTML=packs.map(([k,n])=>`<button class="pk" data-pk="${k}" aria-pressed="${cfg.pack===k}" ${k==='mine'&&m!=='spotify'?'disabled':''}>${n}</button>`).join('');
@@ -824,6 +857,8 @@ function renderSetup(){
 $('#set-players').addEventListener('input',e=>{const m=e.target.id.match(/^pl-(\d)$/);if(m){cfg.players[+m[1]]=e.target.value;ls.set('fa.cfg',cfg);}});
 $('#set-players').addEventListener('click',e=>{const b=e.target.closest('[data-rm]');if(b){cfg.players.splice(+b.dataset.rm,1);ls.set('fa.cfg',cfg);renderSetup();}});
 $('#set-add').onclick=()=>{if(cfg.players.length<8){cfg.players.push('');renderSetup();setTimeout(()=>$('#pl-'+(cfg.players.length-1)).focus(),30);}};
+$('#set-solo').onclick=e=>{const b=e.target.closest('button');if(b&&!b.disabled){cfg.solo=b.dataset.v==='1';ls.set('fa.cfg',cfg);renderSetup();}};
+$('#set-level').onclick=e=>{const b=e.target.closest('button');if(b){cfg.level=b.dataset.v;ls.set('fa.cfg',cfg);renderSetup();}};
 $('#set-lives').onclick=e=>{const b=e.target.closest('button');if(b){cfg.lives=+b.dataset.v;ls.set('fa.cfg',cfg);renderSetup();}};
 $('#set-time').onclick=e=>{const b=e.target.closest('button');if(b){cfg.time=+b.dataset.v;ls.set('fa.cfg',cfg);renderSetup();}};
 $('#set-pack').onclick=e=>{const b=e.target.closest('button');if(b&&!b.disabled){cfg.pack=b.dataset.pk;ls.set('fa.cfg',cfg);renderSetup();}};
@@ -900,13 +935,16 @@ document.addEventListener('visibilitychange',()=>{
   if(!G)return;
   if(document.hidden){if(G.phase==='turn'||G.phase==='song')pauseClock();return;}
   if($('#ov-pause').hidden)resumeClock();
-  if(G.playState&&G.playState!=='ok')setTimeout(()=>retryPlay(false),600);
+  if(G.playState&&G.playState!=='ok'&&G.playState!=='loading')setTimeout(()=>retryPlay(false),600);
 });
 
 async function startGame(){
-  const names=cfg.players.map((n,i)=>n.trim()||`Jugador ${i+1}`);
-  G={id:Date.now(),mode:mode(),date:Date.now(),
-    players:names.map((n,i)=>({id:'p'+i,name:n,color:PRESS[i],lives:cfg.lives,score:0,used:{}})),
+  const solo=!!(cfg.solo&&mode()==='spotify');
+  const names=solo?[(cfg.players[0]||'').trim()||'Tú']:cfg.players.map((n,i)=>n.trim()||`Jugador ${i+1}`);
+  const players=names.map((n,i)=>({id:'p'+i,name:n,color:PRESS[i],lives:cfg.lives,score:0,used:{}}));
+  if(solo)players.push({id:'bot',name:'El Invitado',bot:true,color:'#E6DECB',lives:cfg.lives,score:0,used:{}});
+  G={id:Date.now(),mode:mode(),date:Date.now(),solo,level:cfg.level,
+    players,
     lives:cfg.lives,time:cfg.time,wild:Object.assign({},cfg.wild),pack:cfg.pack,songMode:!!cfg.song,
     turn:0,base:null,prev:null,rebote:false,dissArmed:false,halfNext:false,
     chain:[],records:[],used:{},fails:0,phase:'spinning',np:null,playState:null,pending:null,remain:null};
@@ -917,18 +955,21 @@ async function newRecord(first){
   G.phase='spinning';G.prev=null;G.rebote=false;G.fails=0;renderGame();
   setMsg(first?'Pinchando el primer tema…':'Nadie ha sacado nada. Cambio de disco…');
   if(G.mode==='spotify'){
-    try{
-      let names=G.pack==='mine'?await SP.topArtists():[];
-      if(!names.length)names=PACKS[G.pack==='mine'?'mix':G.pack].list;
-      const t=await SP.randomTrack(names);
-      if(!t)throw new Error('none');
+    let names=[];try{names=G.pack==='mine'?await SP.topArtists():[];}catch(e){}
+    if(!names.length)names=PACKS[G.pack==='mine'?'mix':G.pack].list;
+    let t=null;
+    for(let k=0;k<2&&!t;k++){try{t=await SP.randomTrack(names);}catch(e){}if(!t&&k===0)await new Promise(z=>setTimeout(z,1500));}
+    if(t){
       G.base=t.artists[0];G.np={track:t,by:null};
       for(let i=0;i<t.artists.length;i++)for(let j=i+1;j<t.artists.length;j++)G.used[key(t.artists[i],t.artists[j])]=1;
       G.records.push({track:t});
-      G.playState=await SP.play(t.uri);
-    }catch(e){
-      toast('No he podido hablar con Spotify. Sigo en modo jurado.');G.mode='jurado';return newRecord(first);
+      G.playState='loading';beginTurn();
+      G.playState=await SP.play(t.uri).catch(()=>'error');saveG();renderGame();
+      return;
     }
+    let a=null;try{a=(await SP.artists(pick(names)))[0]||null;}catch(e){}
+    if(a){G.base={id:a.id,name:a.name};G.np={artist:a.name,by:null};G.records.push({artist:a.name});G.playState=null;toast(`No he podido pinchar el tema, pero empezamos con ${a.name}.`);}
+    else{toast('Spotify no responde'+(SP.lastApi?` (${SP.lastApi})`:'')+'. Sigo en modo jurado.');G.mode='jurado';return newRecord(first);}
   }else{
     const pool=PACKS[G.pack==='mine'?'mix':G.pack].list.filter(n=>!G.records.some(r=>r.artist&&norm(r.artist)===norm(n)));
     const n=pick(pool.length?pool:PACKS.mix.list);
@@ -936,7 +977,28 @@ async function newRecord(first){
   }
   beginTurn();
 }
+const BOT={facil:{name:'Fácil',note:'Piensa despacio, se queda en blanco a menudo y tira de los feats más conocidos.',think:[3000,5000],blank:.3,pick:'top'},
+  normal:{name:'Normal',note:'Un rival digno: conoce lo habitual y de vez en cuando se queda en blanco.',think:[2200,4000],blank:.12,pick:'mid'},
+  leyenda:{name:'Leyenda',note:'Contesta rápido, casi nunca falla y busca colaboraciones rebuscadas para dejarte en un aprieto.',think:[1200,2400],blank:.03,pick:'deep'}};
+async function botTurn(){
+  G.phase='bot';G.pending=null;G.turnMs=0;G.endsAt=0;G.rebote=false;G.dissArmed=false;G.paused=false;
+  const halved=G.halfNext;G.halfNext=false;
+  $('#g-in').value='';$('#g-song').value='';saveG();renderGame();setMsg(halved?'Le has tirado un diss: tiene que darse prisa.':'');
+  const A=G.base,lv=BOT[G.level]||BOT.normal,t0=Date.now();
+  let cands=[];try{cands=await SP.botCandidates(A,G.used);}catch(e){}
+  let wait=lv.think[0]+Math.random()*(lv.think[1]-lv.think[0]);if(halved)wait*=.5;
+  await new Promise(k=>setTimeout(k,Math.max(0,wait-(Date.now()-t0))));
+  if(!G||G.phase!=='bot')return;
+  if(!cands.length||Math.random()<lv.blank)return fail('blank');
+  let c;
+  if(lv.pick==='top')c=cands[Math.floor(Math.random()*Math.min(3,cands.length))];
+  else if(lv.pick==='deep')c=cands[Math.floor(cands.length*.5+Math.random()*cands.length*.5)]||cands[cands.length-1];
+  else c=cands[Math.floor(Math.random()*Math.max(1,Math.ceil(cands.length*.6)))];
+  G.pending={b:c.b,title:c.track.name};
+  success(c.b,c.track,[c.track]);
+}
 function beginTurn(){
+  if(G.players[G.turn]&&G.players[G.turn].bot)return botTurn();
   G.phase='turn';G.rebote=false;G.dissArmed=false;G.pending=null;G.paused=false;
   let t=G.time?G.time*1000:0;if(t&&G.halfNext)t=Math.round(t/2);
   G.halfNext=false;G.turnBase=t;G.turnMs=t;G.remain=t;G.endsAt=t?Date.now()+t:0;
@@ -1024,7 +1086,7 @@ async function success(B,track,alts,override){
   if(track&&G.mode==='spotify'){G.playState=await SP.play(track.uri).catch(()=>'error');saveG();renderGame();}
 }
 function fail(reason){
-  if(!G||!['turn','song','notfound','judge'].includes(G.phase))return;
+  if(!G||!['turn','song','notfound','judge','bot'].includes(G.phase))return;
   const p=cur();if(G.rebote)p.used.rebote=true;G.rebote=false;
   sugg=[];$('#g-in').value='';$('#g-song').value='';
   p.lives=Math.max(0,p.lives-1);G.fails++;G.phase='fail';G.pending={reason,out:p.lives===0};
@@ -1052,11 +1114,11 @@ function renderGame(){
   // now playing
   const np=$('#g-np');const by=G.np&&G.np.by?G.players.find(q=>q.id===G.np.by):null;
   if(G.np&&G.np.track){const t=G.np.track;np.innerHTML=`${t.img?`<img src="${esc(t.img)}" alt="">`:`<span class="disc${G.playState==='ok'?' spin':''}" style="--c:${by?by.color:'var(--bone)'}" aria-hidden="true"></span>`}<div class="np-t"><span class="mono" style="font-size:10.5px">${G.playState==='ok'?'Suena':'Último tema'}${by?' · '+esc(by.name):''}</span><b>${esc(t.name)}</b><span>${esc(t.artists.map(a=>a.name).join(', '))}</span></div>${t.url?`<a href="${esc(t.url)}" target="_blank" rel="noopener">Abrir</a>`:''}`;}
-  else if(G.np&&G.np.artist){np.innerHTML=`<span class="disc" style="--c:${by?by.color:'var(--bone)'}" aria-hidden="true"></span><div class="np-t"><span class="mono" style="font-size:10.5px">${by?'Último feat · '+esc(by.name):'Primer artista'}</span><b>${esc(G.np.artist)}</b><span>Sin música en modo jurado</span></div><a href="${esc(spSearch(G.np.artist,''))}" target="_blank" rel="noopener">Buscar</a>`;}
+  else if(G.np&&G.np.artist){np.innerHTML=`<span class="disc" style="--c:${by?by.color:'var(--bone)'}" aria-hidden="true"></span><div class="np-t"><span class="mono" style="font-size:10.5px">${by?'Último feat · '+esc(by.name):'Primer artista'}</span><b>${esc(G.np.artist)}</b><span>${G.mode==='spotify'?'Empieza la cadena':'Sin música en modo jurado'}</span></div><a href="${esc(spSearch(G.np.artist,''))}" target="_blank" rel="noopener">Buscar</a>`;}
   else np.innerHTML=`<span class="disc spin" style="--c:var(--bone)" aria-hidden="true"></span><div class="np-t"><span class="mono" style="font-size:10.5px">Preparando</span><b>Eligiendo disco…</b><span>&nbsp;</span></div>`;
   // banner for playback problems
   const bn=$('#g-banner');
-  if(G.mode==='spotify'&&G.playState&&G.playState!=='ok'&&G.np&&G.np.track){
+  if(G.mode==='spotify'&&G.playState&&G.playState!=='ok'&&G.playState!=='loading'&&G.np&&G.np.track){
     const t=G.np.track;
     bn.innerHTML=`<div class="banner">${G.playState==='nodevice'?'<span><b>Spotify no está abierto en este móvil.</b> Toca «Abrir en Spotify», dale al play y vuelve aquí. El juego lo detecta solo y a partir de ahí todo suena sin tocar nada.</span>':G.playState==='premium'?'<span><b>Para que suene solo hace falta Premium.</b> Puedes abrir cada tema a mano.</span>':'<span><b>No he podido ponerlo.</b> Ábrelo en Spotify o reinténtalo.</span>'}<div class="row2"><a class="cta" href="${esc(t.url||'#')}" target="_blank" rel="noopener" style="text-decoration:none;min-height:50px;font-size:14px">Abrir en Spotify</a><button class="ghost" id="g-retry">Reintentar</button></div>${SP.lastErr?`<span class="mono" style="font-size:10.5px;color:var(--dim)">Código: ${esc(SP.lastErr)}</span>`:''}</div>`;
     $('#g-retry').onclick=()=>retryPlay(true);
@@ -1068,7 +1130,7 @@ function renderGame(){
   const bEl=$('#g-base');
   const rb=G.rebote||(G.phase==='ok'&&G.chain.length&&G.chain[G.chain.length-1].wild==='rebote');
   if(A){bEl.innerHTML=`${rb?'<small>Rebote · tiras del nombre anterior</small>':''}${esc(A.name)}`;}else bEl.innerHTML='<small>Sacando disco</small>…';
-  const inp=$('#g-in');const editable=G.phase==='turn';
+  const inp=$('#g-in');const editable=G.phase==='turn';inp.placeholder=G.phase==='bot'?'pensando…':'¿con quién?';
   inp.disabled=!editable;$('#g-go').disabled=!editable;$('#g-go').hidden=!editable;
   if(!editable)$('#g-sugg').innerHTML='';
   if(G.phase==='ok'){inp.value=G.chain[G.chain.length-1].b.name;}
@@ -1091,7 +1153,7 @@ function renderGame(){
     return`<button class="wb${spent&&!on?' spent':''}" data-w="${k}" aria-pressed="${on}" ${dis&&!on?'disabled':''}><b>${WILD[k].name}</b><span>${sub}</span></button>`;}).join('');
   $('#g-wild').hidden=!$('#g-wild').innerHTML;
   // panel
-  const pan=$('#g-panel');pan.hidden=!['ok','fail','notfound','judge'].includes(G.phase);
+  const pan=$('#g-panel');pan.hidden=!['ok','fail','notfound','judge','bot'].includes(G.phase);
   if(!pan.hidden){pan.innerHTML=panelHTML();animateSays(pan);}
   wirePanel();
   renderClock();renderChain();
@@ -1099,21 +1161,25 @@ function renderGame(){
 function nextName(){const al=G.players.filter(q=>q.lives>0);if(al.length<=1)return null;let i=G.turn;do{i=(i+1)%G.players.length;}while(G.players[i].lives<=0);return G.players[i].name;}
 function panelHTML(){
   const p=cur(),nx=nextName();
-  const nextBtn=nx?`<button class="cta" id="pn-next">Le toca a ${esc(nx)}</button>`:`<button class="cta" id="pn-next">Ver la mixtape</button>`;
+  const nxBot=nx&&G.solo&&nx==='El Invitado';
+  const nextBtn=nx?`<button class="cta" id="pn-next">${G.solo?(nxBot?'Turno del Invitado':'Te toca'):'Le toca a '+esc(nx)}</button>`:`<button class="cta" id="pn-next">Ver la mixtape</button>`;
   const seed=G.chain.length+G.players.reduce((a,q)=>a+q.lives,0);
   const say=(mood,key,inner)=>`<div class="say">${hostSVG(mood)}<div class="bub left" data-k="${G.id}-${key}">${inner}</div></div>`;
+  if(G.phase==='bot'){
+    return say('doubt','bot-'+G.chain.length+'-'+seed,`<span class="vword">Mmm…</span>${pickS(QUIP.think,seed)}`);
+  }
   if(G.phase==='ok'){
     const L=G.chain[G.chain.length-1];const t=L.track;
     const alts=L.alts&&L.alts.length>1?`<div class="alts" role="group" aria-label="Otras versiones">${L.alts.map((a,i)=>`<button data-alt="${i}" aria-pressed="${a.id===t.id}">${esc(a.name)}</button>`).join('')}</div>`:'';
-    return`${say('happy','ok'+G.chain.length,`<span class="vword">Existe.</span>${pickS(QUIP.ok,seed)}`)}
+    return`${p.bot?say('happy','okb'+G.chain.length,`<span class="vword">Mi turno.</span><b>${esc(L.a.name)}</b> ft. <b>${esc(L.b.name)}</b>${t?`, «${esc(t.name)}»`:''}. ${pickS(QUIP.botok,seed)}`):say('happy','ok'+G.chain.length,`<span class="vword">Existe.</span>${pickS(G.solo?QUIP.okvs:QUIP.ok,seed)}`)}
       ${t?`<div class="card">${t.img?`<img src="${esc(t.img)}" alt="">`:`<span class="disc" style="--c:${p.color}"></span>`}<div><b>${esc(t.name)}</b><span>${esc(t.artists.map(a=>a.name).join(', '))}</span></div></div>${alts}`:`<p class="vsub">${L.override?'El grupo lo da por bueno.':'Validado por el jurado.'} <b>${esc(L.a.name)} ft. ${esc(L.b.name)}</b>${L.song?` · «${esc(L.song)}»`:''}</p>`}
       ${G.halfNext?'<p class="vsub"><b>Diss lanzado.</b> El siguiente juega con la mitad de tiempo.</p>':''}
       ${nextBtn}`;
   }
   if(G.phase==='fail'){
-    const r=G.pending||{};const why=r.reason==='time'?'¡Tiempo!':r.reason==='giveup'?'Se rinde.':'No cuela.';
-    const quip=pickS(r.reason==='time'?QUIP.time:r.reason==='giveup'?QUIP.giveup:QUIP.wrong,seed);
-    const mood=r.reason==='time'?'wow':r.reason==='giveup'?'doubt':'angry';
+    const r=G.pending||{};const why=r.reason==='blank'?'En blanco.':r.reason==='time'?'¡Tiempo!':r.reason==='giveup'?'Se rinde.':'No cuela.';
+    const quip=r.reason==='blank'?pickS(QUIP.blank,seed).replace('%A',esc(G.base.name)):pickS(r.reason==='time'?QUIP.time:r.reason==='giveup'?QUIP.giveup:QUIP.wrong,seed);
+    const mood=r.reason==='blank'?'doubt':r.reason==='time'?'wow':r.reason==='giveup'?'doubt':'angry';
     const out=r.out?`<p class="vsub"><b>${esc(p.name)} se queda sin vidas.</b> Al backstage.</p>`:`<p class="vsub">Pierde una vida. Le quedan <b>${p.lives}</b>.</p>`;
     const al=alive().length;const change=nx&&G.fails>=al;
     return`${say(mood,'f'+G.chain.length+'-'+seed,`<span class="vword bad">${why}</span>${quip}`)}${out}
@@ -1239,7 +1305,7 @@ function openPause(){
   $('#ov-pause').hidden=false;setTimeout(()=>$('#pause-go').focus(),40);
 }
 $('#g-pause').onclick=openPause;
-$('#pause-go').onclick=()=>{$('#ov-pause').hidden=true;resumeClock();if(G.phase==='spinning')newRecord(!G.chain.length);renderGame();keepAwake();};
+$('#pause-go').onclick=()=>{$('#ov-pause').hidden=true;resumeClock();if(G.phase==='spinning')newRecord(!G.chain.length);if(G.phase==='bot'){botTurn();return;}renderGame();keepAwake();};
 $('#pause-skip').onclick=()=>{$('#ov-pause').hidden=true;G.paused=false;newRecord(false);};
 let endArmed=false;
 $('#pause-end').onclick=e=>{const b=e.currentTarget;if(!endArmed){endArmed=true;b.textContent='Toca otra vez para terminar';setTimeout(()=>{endArmed=false;b.textContent='Terminar la partida';},3500);return;}endArmed=false;$('#ov-pause').hidden=true;gameOver();};
@@ -1259,7 +1325,7 @@ function renderOver(){
   const d=new Date(g.date).toLocaleDateString('es-ES',{day:'numeric',month:'short'}).replace('.','');
   const prev=G;G=g;
   $('#o-card').innerHTML=`<div class="jc-cat"><span>Feat Arena · Mixtape</span><span>${esc(d)}</span></div>
-    <p class="jc-win">${al.length===1?'Se lleva la sesión':'Va en cabeza'}</p>
+    <p class="jc-win">${g.solo&&win.bot?'Gana la máquina. Se lleva la sesión':al.length===1?'Se lleva la sesión':'Va en cabeza'}</p>
     <h2 class="jc-name" style="color:#131217">${esc(win.name)}</h2>
     ${g.chain.length?`<ol class="tl">${g.chain.map(L=>linkHTML(L)).join('')}</ol>`:'<p class="vsub" style="color:#5d5866;margin-top:16px">Esta sesión no ha llegado a sonar ningún feat.</p>'}
     <ol class="rank">${ranked.map(p=>`<li><span class="disc" style="--c:${p.color}"></span><span>${esc(p.name)}</span><span>${p.score} ${p.score===1?'feat':'feats'} · ${p.lives>0?p.lives+' ♥':'fuera'}</span></li>`).join('')}</ol>`;
@@ -1280,7 +1346,7 @@ async function checkUpdate(){
   if(IN_ARTIFACT||location.protocol==='file:')return;
   try{
     const r=await fetch(location.pathname+'?t='+Date.now(),{cache:'no-store'});const t=await r.text();
-    const m=t.match(/FA-(\d{3}) · ℗/),mine=13;
+    const m=t.match(/FA-(\d{3}) · ℗/),mine=15;
     if(m&&+m[1]>mine&&(!G||G.phase==='over'||G.paused)){location.replace(location.pathname+'?v='+m[1]);}
   }catch(e){}
 }
