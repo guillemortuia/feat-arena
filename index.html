@@ -263,7 +263,7 @@ h2.h{font:900 34px/.95 var(--f-wide);font-stretch:125%;text-transform:uppercase;
 <!-- ================= HOME ================= -->
 <section class="screen" id="scr-home">
   <div class="wrap">
-    <div class="cat"><span class="mono">FA-007 · ℗ 2026</span><span class="mono">El Invitado Records</span></div>
+    <div class="cat"><span class="mono">FA-008 · ℗ 2026</span><span class="mono">El Invitado Records</span></div>
     <h1 class="logo" aria-label="Feat Arena"><span class="w" aria-hidden="true">Feat</span><span class="w out" aria-hidden="true">Arena</span><span class="ft" aria-hidden="true">ft.</span></h1>
     <p class="tagline">Suena un tema. Tú dices con quién ha colaborado el artista y en qué canción. El siguiente sigue la cadena.</p>
     <ol class="credits" aria-label="Así suena una partida">
@@ -377,10 +377,10 @@ h2.h{font:900 34px/.95 var(--f-wide);font-stretch:125%;text-transform:uppercase;
     <div class="cat"><span class="mono" id="warm-t">Prueba de sonido</span><button class="link" id="warm-x" style="padding:0">Cancelar</button></div>
     <div class="sheet-box" style="margin-top:28px">
       <div class="host" style="margin-top:0"><div class="label spin" aria-hidden="true"><span>ft.</span></div><div><b>Antes de pinchar</b><span class="r" id="warm-st" aria-live="polite">Todavía no oigo nada.</span></div></div>
-      <p class="vsub" style="margin-top:18px">Pon cualquier canción en Spotify, en este móvil, y vuelve aquí. Empiezo en cuanto la oiga.</p>
+      <p class="vsub" style="margin-top:18px">Toca el botón, dale al play en Spotify y vuelve aquí. En cuanto la oiga, empiezo la partida.</p>
     </div>
     <div class="stack" style="margin-top:16px">
-      <a class="cta" href="https://open.spotify.com/" target="_blank" rel="noopener" style="text-decoration:none">Abrir Spotify</a>
+      <a class="cta" href="https://open.spotify.com/track/3MrRksHupTVEQ7YbA0FsZK" target="_blank" rel="noopener" style="text-decoration:none;flex-direction:column;gap:6px"><span>Pinchar la intro</span><span style="font:italic 500 15px/1 var(--f-ital);text-transform:none;letter-spacing:0">The Final Countdown · Europe</span></a>
       <button class="ghost" id="warm-skip">Empezar igualmente</button>
     </div>
   </div>
@@ -475,7 +475,7 @@ const SP={
   lastErr:'',
   async diag(){
     const L=[];const em=r=>r&&r.data&&r.data.error?(r.data.error.reason||r.data.error.message||''):'';
-    L.push('Versión: FA-007');L.push('Dirección: '+location.origin+location.pathname);
+    L.push('Versión: FA-008');L.push('Dirección: '+location.origin+location.pathname);
     L.push('Móvil: '+(/iPhone|iPad/.test(navigator.userAgent)?'iPhone':/Android/.test(navigator.userAgent)?'Android':'otro')+' · '+(navigator.userAgent.match(/(CriOS|FxiOS|EdgiOS|Chrome|Firefox|Version)\/[\d.]+/)||[''])[0]);
     if(!this.ready){L.push('Spotify: no conectado');return L.join('\n');}
     try{
