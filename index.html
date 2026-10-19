@@ -325,7 +325,7 @@ h2.h{font:900 34px/.95 var(--f-wide);font-stretch:125%;text-transform:uppercase;
 <!-- ================= HOME ================= -->
 <section class="screen" id="scr-home">
   <div class="wrap">
-    <div class="cat"><span class="mono">FA-012 · ℗ 2026</span><span class="mono">El Invitado Records</span></div>
+    <div class="cat"><span class="mono">FA-013 · ℗ 2026</span><span class="mono">El Invitado Records</span></div>
     <h1 class="logo" aria-label="Feat Arena"><span class="w" aria-hidden="true">Feat</span><span class="w out" aria-hidden="true">Arena</span><span class="ft" aria-hidden="true">ft.</span></h1>
     <p class="tagline">Suena un tema. Tú dices con quién ha colaborado el artista y en qué canción. El siguiente sigue la cadena.</p>
     <ol class="credits" aria-label="Así suena una partida">
@@ -445,6 +445,7 @@ h2.h{font:900 34px/.95 var(--f-wide);font-stretch:125%;text-transform:uppercase;
     </div>
     <div class="stack" style="margin-top:18px">
       <a class="cta" id="warm-go" href="https://open.spotify.com/track/3MrRksHupTVEQ7YbA0FsZK" target="_blank" rel="noopener" style="text-decoration:none;flex-direction:column;gap:6px"><span>Pinchar la intro</span><span style="font:italic 500 15px/1 var(--f-ital);text-transform:none;letter-spacing:0">The Final Countdown · Europe</span></a>
+      <button class="cta bone" id="warm-ready" hidden>Ya estoy, ¡empieza!</button>
       <button class="ghost" id="warm-skip">Empezar sin intro</button>
     </div>
   </div>
@@ -540,7 +541,7 @@ const SP={
   lastErr:'',
   async diag(){
     const L=[];const em=r=>r&&r.data&&r.data.error?(r.data.error.reason||r.data.error.message||''):'';
-    L.push('Versión: FA-012');L.push('Dirección: '+location.origin+location.pathname);
+    L.push('Versión: FA-013');L.push('Dirección: '+location.origin+location.pathname);
     L.push('Móvil: '+(/iPhone|iPad/.test(navigator.userAgent)?'iPhone':/Android/.test(navigator.userAgent)?'Android':'otro')+' · '+(navigator.userAgent.match(/(CriOS|FxiOS|EdgiOS|Chrome|Firefox|Version)\/[\d.]+/)||[''])[0]);
     if(!this.ready){L.push('Spotify: no conectado');return L.join('\n');}
     try{
@@ -832,9 +833,7 @@ let warmT=null,warmCb=null,warmBusy=false,warmItem=null;
 const INTRO_URI='spotify:track:3MrRksHupTVEQ7YbA0FsZK',INTRO_RIFF_MS=13000,INTRO_HOLD_MS=9000;
 async function spotifyLive(){try{const r=await SP.api('/me/player');if(r.ok&&r.data&&r.data.is_playing&&r.data.device){SP.dev=r.data.device.id||SP.dev;warmItem=r.data.item||null;return r.data.device.name||'tu móvil';}}catch(e){}return null;}
 async function introCountdown(cb){
-  const isIntro=warmItem&&(warmItem.uri===INTRO_URI||/final countdown/i.test(warmItem.name||''));
-  if(!isIntro){$('#ov-warm').hidden=true;cb();return;}
-  if(warmItem.uri===INTRO_URI||(warmItem.duration_ms||0)>INTRO_RIFF_MS)await SP.api('/me/player/seek?position_ms='+INTRO_RIFF_MS+(SP.dev?'&device_id='+encodeURIComponent(SP.dev):''),{method:'PUT'}).catch(()=>{});
+  SP.api('/me/player/seek?position_ms='+INTRO_RIFF_MS,{method:'PUT'}).catch(()=>{});
   const box=$('#count'),num=$('#count-n'),sub=$('#count-sub'),hb=$('#cd-host'),rings=$('#cd-rings'),fl=$('#cd-flash');
   hb.innerHTML=hostSVG('wow');const hs=hb.querySelector('svg');
   $('#ov-warm').hidden=true;box.hidden=false;sub.textContent='The Final Countdown';
@@ -855,30 +854,29 @@ async function introCountdown(cb){
     buzz(30);i++;setTimeout(next,BAR);};
   next();
 }
-const WARM={start:'Te abro Spotify con mi canción de entrada. <b>Tú vuelve aquí volando</b>, que la cuenta atrás no espera a nadie. Y yo menos.',
-  back:'¿Ya estás? Dame un segundo, que estoy afinando el oído…',
-  still:'Sigo sin oír nada. ¿Seguro que ha arrancado? Si no, dale al botón otra vez.',
-  heard:'¡Eso es! Ahí está mi tema. <em>Que empiece…</em>'};
-let warmMiss=0;
+const WARM={start:'Te pongo mi canción de entrada en Spotify. <b>Tú vuelve aquí volando</b>, que la cuenta atrás no espera a nadie. Y yo menos.',
+  left:'¡Corre, vuelve! Que empiezo sin ti.',
+  back:'¡Eso es! <em>Que empiece…</em>'};
+let warmLeft=false,warmGoing=false;
 const wb=()=>$('#warm-bub'),wh=()=>$('#warm-host svg');
 async function warmup(cb){
   if(warmBusy)return;warmBusy=true;
-  const name=await spotifyLive();warmBusy=false;
+  const name=await Promise.race([spotifyLive(),new Promise(k=>setTimeout(()=>k(null),2500))]);warmBusy=false;
   if(name){cb();return;}
-  warmCb=cb;warmMiss=0;$('#warm-host').innerHTML=hostSVG('happy');$('#ov-warm').hidden=false;
+  warmCb=cb;warmLeft=false;warmGoing=false;$('#warm-ready').hidden=true;
+  $('#warm-host').innerHTML=hostSVG('happy');$('#ov-warm').hidden=false;
   speak(wb(),wh(),WARM.start,'happy');
-  clearInterval(warmT);warmT=setInterval(warmPoll,2000);
 }
-async function warmPoll(){
-  if(warmBusy||!warmCb||$('#ov-warm').hidden||document.hidden)return;
-  warmBusy=true;const n=await spotifyLive();warmBusy=false;
-  if(n&&warmCb){const cb=warmCb;warmCb=null;clearInterval(warmT);speak(wb(),wh(),WARM.heard,'wow');buzz(20);setTimeout(()=>introCountdown(cb),1300);}
-  else if(warmCb&&warmMiss>0){warmMiss++;if(warmMiss===4)speak(wb(),wh(),WARM.still,'doubt');}
+function warmGo(){
+  if(!warmCb||warmGoing)return;warmGoing=true;const cb=warmCb;warmCb=null;
+  speak(wb(),wh(),WARM.back,'wow');buzz(20);setTimeout(()=>introCountdown(cb),900);
 }
-function closeWarm(){clearInterval(warmT);warmT=null;warmCb=null;finishSpeak(wb());$('#ov-warm').hidden=true;}
+function closeWarm(){warmCb=null;warmGoing=false;finishSpeak(wb());$('#ov-warm').hidden=true;}
+$('#warm-go').addEventListener('click',()=>{warmLeft=true;$('#warm-ready').hidden=false;setTimeout(()=>{if(warmCb)speak(wb(),wh(),WARM.left,'wow');},300);});
+$('#warm-ready').onclick=warmGo;
 $('#warm-x').onclick=closeWarm;
 $('#warm-skip').onclick=()=>{const cb=warmCb;closeWarm();cb&&cb();};
-document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!$('#ov-warm').hidden&&warmCb){warmMiss=1;speak(wb(),wh(),WARM.back,'doubt');setTimeout(warmPoll,400);}});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!$('#ov-warm').hidden&&warmCb&&warmLeft)setTimeout(warmGo,500);});
 const launch=()=>mode()==='spotify'?warmup(startGame):startGame();
 $('#set-go').onclick=launch;
 
@@ -1282,7 +1280,7 @@ async function checkUpdate(){
   if(IN_ARTIFACT||location.protocol==='file:')return;
   try{
     const r=await fetch(location.pathname+'?t='+Date.now(),{cache:'no-store'});const t=await r.text();
-    const m=t.match(/FA-(\d{3}) · ℗/),mine=12;
+    const m=t.match(/FA-(\d{3}) · ℗/),mine=13;
     if(m&&+m[1]>mine&&(!G||G.phase==='over'||G.paused)){location.replace(location.pathname+'?v='+m[1]);}
   }catch(e){}
 }
