@@ -328,7 +328,7 @@ h2.h{font:900 34px/.95 var(--f-wide);font-stretch:125%;text-transform:uppercase;
 <!-- ================= HOME ================= -->
 <section class="screen" id="scr-home">
   <div class="wrap">
-    <div class="cat"><span class="mono">FA-017 · ℗ 2026</span><span class="mono">El Invitado Records</span></div>
+    <div class="cat"><span class="mono">FA-018 · ℗ 2026</span><span class="mono">El Invitado Records</span></div>
     <h1 class="logo" aria-label="Feat Arena"><span class="w" aria-hidden="true">Feat</span><span class="w out" aria-hidden="true">Arena</span><span class="ft" aria-hidden="true">ft.</span></h1>
     <p class="tagline">Suena un tema. Tú dices con quién ha colaborado el artista y en qué canción. El siguiente sigue la cadena.</p>
     <ol class="credits" aria-label="Así suena una partida">
@@ -549,7 +549,7 @@ const SP={
   lastErr:'',
   async diag(){
     const L=[];const em=r=>r&&r.data&&r.data.error?(r.data.error.reason||r.data.error.message||''):'';
-    L.push('Versión: FA-017');L.push('Dirección: '+location.origin+location.pathname);
+    L.push('Versión: FA-018');L.push('Dirección: '+location.origin+location.pathname);
     L.push('Móvil: '+(/iPhone|iPad/.test(navigator.userAgent)?'iPhone':/Android/.test(navigator.userAgent)?'Android':'otro')+' · '+(navigator.userAgent.match(/(CriOS|FxiOS|EdgiOS|Chrome|Firefox|Version)\/[\d.]+/)||[''])[0]);
     if(!this.ready){L.push('Spotify: no conectado');return L.join('\n');}
     try{
@@ -580,9 +580,19 @@ const SP={
     }
     return this.tok.access;
   },
+  n403:0,blockedUntil:0,cache:new Map(),
   async api(path,opt={},retry=0){
+    const isGet=!opt.method||opt.method==='GET';
+    if(isGet&&path.startsWith('/search')&&this.cache.has(path))return this.cache.get(path);
+    if(Date.now()<this.blockedUntil)return{status:403,ok:false,data:{error:{message:'pausa tras varios rechazos de Spotify'}}};
+    const res=await this._api(path,opt,retry);
+    if(res.status===403){if(++this.n403>=3){this.blockedUntil=Date.now()+60000;this.n403=0;}}else if(res.ok)this.n403=0;
+    if(isGet&&res.ok&&path.startsWith('/search')){this.cache.set(path,res);if(this.cache.size>300)this.cache.delete(this.cache.keys().next().value);}
+    return res;
+  },
+  async _api(path,opt={},retry=0){
     const r=await fetch('https://api.spotify.com/v1'+path,Object.assign({},opt,{headers:{Authorization:'Bearer '+await this.access(),'Content-Type':'application/json'}}));
-    if(r.status===401&&!retry){this.tok.exp=0;return this.api(path,opt,1);}
+    if(r.status===401&&!retry){this.tok.exp=0;return this._api(path,opt,1);}
     if(r.status===429&&retry<2){const s=Math.min(5,+(r.headers.get('Retry-After')||1));await new Promise(k=>setTimeout(k,s*1000));return this.api(path,opt,retry+1);}
     let data=null;if((r.headers.get('content-type')||'').includes('json')){try{data=await r.json();}catch(e){}}
     else if(!r.ok){try{const tx=(await r.text()).trim();if(tx)data={error:{message:tx.slice(0,160)}};}catch(e){}}
@@ -592,7 +602,7 @@ const SP={
   async artists(q){const r=await this.api('/search?type=artist&limit=7&q='+encodeURIComponent(q));return(r.data&&r.data.artists&&r.data.artists.items||[]).map(a=>({id:a.id,name:a.name,img:imgOf(a.images,64)}));},
   async botCandidates(A,used){
     const q=(s,off)=>this.api(`/search?type=track&limit=10&offset=${off||0}&q=`+encodeURIComponent(s)).then(r=>r.data&&r.data.tracks&&r.data.tracks.items||[]).catch(()=>[]);
-    const sets=await Promise.all([q(`artist:"${A.name}"`,0),q(`artist:"${A.name}"`,10),q(`artist:"${A.name}"`,20),q(`${A.name} feat`,0),q(`${A.name} ft`,10)]);
+    const sets=await Promise.all([q(`artist:"${A.name}"`,0),q(`artist:"${A.name}"`,10),q(`${A.name} feat`,0)]);
     const out=[],seen=new Set();
     sets.flat().forEach(t=>{if(!t||!t.artists)return;const ids=t.artists.map(a=>a.id);if(!ids.includes(A.id))return;
       t.artists.forEach(b=>{if(b.id===A.id||seen.has(b.id))return;if(used[[A.id,b.id].sort().join('~')])return;seen.add(b.id);out.push({b:{id:b.id,name:b.name},track:trackOf(t)});});});
@@ -602,7 +612,7 @@ const SP={
     const hit=(known||[]).filter(t=>titleMatch(title,t.name));
     if(hit.length)return hit;
     const q=s=>this.api('/search?type=track&limit=10&q='+encodeURIComponent(s)).then(r=>r.data&&r.data.tracks&&r.data.tracks.items||[]).catch(()=>[]);
-    const sets=await Promise.all([q(`${title} ${A.name} ${B.name}`),q(`track:"${title}" artist:"${A.name}"`),q(`track:"${title}" artist:"${B.name}"`),q(`${title} ${A.name}`)]);
+    const sets=await Promise.all([q(`${title} ${A.name} ${B.name}`),q(`${title} ${A.name}`)]);
     const seen=new Set(),out=[];
     sets.flat().forEach(t=>{if(!t||!t.artists||seen.has(t.id))return;if(!pairOk(t,A,B)||!titleMatch(title,t.name))return;seen.add(t.id);out.push(trackOf(t));});
     return out.slice(0,5);
@@ -610,7 +620,7 @@ const SP={
   async findFeat(A,B){
     const q=s=>this.api('/search?type=track&limit=10&q='+encodeURIComponent(s)).then(r=>r.data&&r.data.tracks&&r.data.tracks.items||[]).catch(()=>[]);
     const off=s=>this.api('/search?type=track&limit=10&offset=10&q='+encodeURIComponent(s)).then(r=>r.data&&r.data.tracks&&r.data.tracks.items||[]).catch(()=>[]);
-    const sets=await Promise.all([q(`${A.name} ${B.name}`),off(`${A.name} ${B.name}`),q(`artist:"${A.name}" ${B.name}`),q(`artist:"${B.name}" ${A.name}`)]);
+    const sets=await Promise.all([q(`${A.name} ${B.name}`),off(`${A.name} ${B.name}`)]);
     const seen=new Set(),out=[];
     sets.flat().forEach(t=>{if(!t||!t.artists)return;const ids=t.artists.map(a=>a.id);
       if(!pairOk(t,A,B))return;const key=norm(t.name.replace(/\s*[-(\[].*$/,''))+'|'+ids.slice().sort().join();if(seen.has(t.id)||seen.has(key))return;seen.add(t.id);seen.add(key);out.push(trackOf(t));});
@@ -1237,7 +1247,7 @@ function linkHTML(L){
 /* ================= input & suggestions ================= */
 let sugg=[],hl=0,sTimer=null,sTok=0;
 const inp=$('#g-in');
-inp.addEventListener('input',()=>{clearTimeout(sTimer);const q=inp.value.trim();if(!q){sugg=[];drawSugg();return;}sTimer=setTimeout(()=>suggest(q),G&&G.mode==='spotify'?220:60);});
+inp.addEventListener('input',()=>{clearTimeout(sTimer);const q=inp.value.trim();if(!q){sugg=[];drawSugg();return;}if(G&&G.mode==='spotify'&&q.length<2){sugg=[];drawSugg();return;}sTimer=setTimeout(()=>suggest(q),G&&G.mode==='spotify'?400:60);});
 inp.addEventListener('keydown',e=>{
   if(e.key==='ArrowDown'&&sugg.length){e.preventDefault();hl=(hl+1)%sugg.length;drawSugg();}
   else if(e.key==='ArrowUp'&&sugg.length){e.preventDefault();hl=(hl-1+sugg.length)%sugg.length;drawSugg();}
@@ -1352,7 +1362,7 @@ async function checkUpdate(){
   if(IN_ARTIFACT||location.protocol==='file:')return;
   try{
     const r=await fetch(location.pathname+'?t='+Date.now(),{cache:'no-store'});const t=await r.text();
-    const m=t.match(/FA-(\d{3}) · ℗/),mine=17;
+    const m=t.match(/FA-(\d{3}) · ℗/),mine=18;
     if(m&&+m[1]>mine&&(!G||G.phase==='over'||G.paused)){location.replace(location.pathname+'?v='+m[1]);}
   }catch(e){}
 }
