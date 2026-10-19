@@ -263,7 +263,7 @@ h2.h{font:900 34px/.95 var(--f-wide);font-stretch:125%;text-transform:uppercase;
 <!-- ================= HOME ================= -->
 <section class="screen" id="scr-home">
   <div class="wrap">
-    <div class="cat"><span class="mono">FA-009 · ℗ 2026</span><span class="mono">El Invitado Records</span></div>
+    <div class="cat"><span class="mono">FA-010 · ℗ 2026</span><span class="mono">El Invitado Records</span></div>
     <h1 class="logo" aria-label="Feat Arena"><span class="w" aria-hidden="true">Feat</span><span class="w out" aria-hidden="true">Arena</span><span class="ft" aria-hidden="true">ft.</span></h1>
     <p class="tagline">Suena un tema. Tú dices con quién ha colaborado el artista y en qué canción. El siguiente sigue la cadena.</p>
     <ol class="credits" aria-label="Así suena una partida">
@@ -475,7 +475,7 @@ const SP={
   lastErr:'',
   async diag(){
     const L=[];const em=r=>r&&r.data&&r.data.error?(r.data.error.reason||r.data.error.message||''):'';
-    L.push('Versión: FA-009');L.push('Dirección: '+location.origin+location.pathname);
+    L.push('Versión: FA-010');L.push('Dirección: '+location.origin+location.pathname);
     L.push('Móvil: '+(/iPhone|iPad/.test(navigator.userAgent)?'iPhone':/Android/.test(navigator.userAgent)?'Android':'otro')+' · '+(navigator.userAgent.match(/(CriOS|FxiOS|EdgiOS|Chrome|Firefox|Version)\/[\d.]+/)||[''])[0]);
     if(!this.ready){L.push('Spotify: no conectado');return L.join('\n');}
     try{
@@ -715,8 +715,18 @@ $('#set-time').onclick=e=>{const b=e.target.closest('button');if(b){cfg.time=+b.
 $('#set-pack').onclick=e=>{const b=e.target.closest('button');if(b&&!b.disabled){cfg.pack=b.dataset.pk;ls.set('fa.cfg',cfg);renderSetup();}};
 $('#set-wild').onclick=e=>{const b=e.target.closest('[data-wild]');if(b){cfg.wild[b.dataset.wild]=!cfg.wild[b.dataset.wild];ls.set('fa.cfg',cfg);renderSetup();}};
 $('#set-rules').onclick=e=>{const b=e.target.closest('[data-rule]');if(b){cfg.song=!cfg.song;ls.set('fa.cfg',cfg);renderSetup();}};
-let warmT=null,warmCb=null,warmBusy=false;
-async function spotifyLive(){try{const r=await SP.api('/me/player');if(r.ok&&r.data&&r.data.is_playing&&r.data.device){SP.dev=r.data.device.id||SP.dev;return r.data.device.name||'tu móvil';}}catch(e){}return null;}
+let warmT=null,warmCb=null,warmBusy=false,warmItem=null;
+const INTRO_URI='spotify:track:3MrRksHupTVEQ7YbA0FsZK',INTRO_RIFF_MS=13000,INTRO_HOLD_MS=9000;
+async function spotifyLive(){try{const r=await SP.api('/me/player');if(r.ok&&r.data&&r.data.is_playing&&r.data.device){SP.dev=r.data.device.id||SP.dev;warmItem=r.data.item||null;return r.data.device.name||'tu móvil';}}catch(e){}return null;}
+async function introCountdown(cb){
+  const isIntro=warmItem&&(warmItem.uri===INTRO_URI||/final countdown/i.test(warmItem.name||''));
+  if(!isIntro){$('#ov-warm').hidden=true;cb();return;}
+  if(warmItem.uri===INTRO_URI||(warmItem.duration_ms||0)>INTRO_RIFF_MS)await SP.api('/me/player/seek?position_ms='+INTRO_RIFF_MS+(SP.dev?'&device_id='+encodeURIComponent(SP.dev):''),{method:'PUT'}).catch(()=>{});
+  const st=$('#warm-st');let n=3;
+  st.textContent='¡Que empiece la cuenta atrás!';
+  const step=Math.round(INTRO_HOLD_MS/4);
+  const tick=setInterval(()=>{if(n>0){st.textContent=n+'…';buzz(15);n--;}else{clearInterval(tick);st.textContent='¡A pinchar!';setTimeout(()=>{$('#ov-warm').hidden=true;cb();},500);}},step);
+}
 async function warmup(cb){
   if(warmBusy)return;warmBusy=true;
   const name=await spotifyLive();warmBusy=false;
@@ -727,7 +737,7 @@ async function warmup(cb){
 async function warmPoll(){
   if(warmBusy||!warmCb||$('#ov-warm').hidden||document.hidden)return;
   warmBusy=true;const n=await spotifyLive();warmBusy=false;
-  if(n&&warmCb){const cb=warmCb;warmCb=null;clearInterval(warmT);$('#warm-st').textContent='Sonando en '+n+'. Allá vamos.';buzz(20);setTimeout(()=>{$('#ov-warm').hidden=true;cb();},800);}
+  if(n&&warmCb){const cb=warmCb;warmCb=null;clearInterval(warmT);$('#warm-st').textContent='Sonando en '+n+'.';buzz(20);introCountdown(cb);}
 }
 function closeWarm(){clearInterval(warmT);warmT=null;warmCb=null;$('#ov-warm').hidden=true;}
 $('#warm-x').onclick=closeWarm;
@@ -1132,7 +1142,7 @@ async function checkUpdate(){
   if(IN_ARTIFACT||location.protocol==='file:')return;
   try{
     const r=await fetch(location.pathname+'?t='+Date.now(),{cache:'no-store'});const t=await r.text();
-    const m=t.match(/FA-(\d{3}) · ℗/),mine=9;
+    const m=t.match(/FA-(\d{3}) · ℗/),mine=10;
     if(m&&+m[1]>mine&&(!G||G.phase==='over'||G.paused)){location.replace(location.pathname+'?v='+m[1]);}
   }catch(e){}
 }
