@@ -328,7 +328,7 @@ h2.h{font:900 34px/.95 var(--f-wide);font-stretch:125%;text-transform:uppercase;
 <!-- ================= HOME ================= -->
 <section class="screen" id="scr-home">
   <div class="wrap">
-    <div class="cat"><span class="mono">FA-016 · ℗ 2026</span><span class="mono">El Invitado Records</span></div>
+    <div class="cat"><span class="mono">FA-017 · ℗ 2026</span><span class="mono">El Invitado Records</span></div>
     <h1 class="logo" aria-label="Feat Arena"><span class="w" aria-hidden="true">Feat</span><span class="w out" aria-hidden="true">Arena</span><span class="ft" aria-hidden="true">ft.</span></h1>
     <p class="tagline">Suena un tema. Tú dices con quién ha colaborado el artista y en qué canción. El siguiente sigue la cadena.</p>
     <ol class="credits" aria-label="Así suena una partida">
@@ -549,7 +549,7 @@ const SP={
   lastErr:'',
   async diag(){
     const L=[];const em=r=>r&&r.data&&r.data.error?(r.data.error.reason||r.data.error.message||''):'';
-    L.push('Versión: FA-016');L.push('Dirección: '+location.origin+location.pathname);
+    L.push('Versión: FA-017');L.push('Dirección: '+location.origin+location.pathname);
     L.push('Móvil: '+(/iPhone|iPad/.test(navigator.userAgent)?'iPhone':/Android/.test(navigator.userAgent)?'Android':'otro')+' · '+(navigator.userAgent.match(/(CriOS|FxiOS|EdgiOS|Chrome|Firefox|Version)\/[\d.]+/)||[''])[0]);
     if(!this.ready){L.push('Spotify: no conectado');return L.join('\n');}
     try{
@@ -585,6 +585,7 @@ const SP={
     if(r.status===401&&!retry){this.tok.exp=0;return this.api(path,opt,1);}
     if(r.status===429&&retry<2){const s=Math.min(5,+(r.headers.get('Retry-After')||1));await new Promise(k=>setTimeout(k,s*1000));return this.api(path,opt,retry+1);}
     let data=null;if((r.headers.get('content-type')||'').includes('json')){try{data=await r.json();}catch(e){}}
+    else if(!r.ok){try{const tx=(await r.text()).trim();if(tx)data={error:{message:tx.slice(0,160)}};}catch(e){}}
     if(!r.ok){const e=data&&data.error;this.lastApi=path.split('?')[0]+' '+r.status+(e&&(e.message||e.reason)?' · '+(e.reason||e.message):'');}
     return{status:r.status,ok:r.ok,data};
   },
@@ -1351,7 +1352,7 @@ async function checkUpdate(){
   if(IN_ARTIFACT||location.protocol==='file:')return;
   try{
     const r=await fetch(location.pathname+'?t='+Date.now(),{cache:'no-store'});const t=await r.text();
-    const m=t.match(/FA-(\d{3}) · ℗/),mine=16;
+    const m=t.match(/FA-(\d{3}) · ℗/),mine=17;
     if(m&&+m[1]>mine&&(!G||G.phase==='over'||G.paused)){location.replace(location.pathname+'?v='+m[1]);}
   }catch(e){}
 }
