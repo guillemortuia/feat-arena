@@ -263,7 +263,7 @@ h2.h{font:900 34px/.95 var(--f-wide);font-stretch:125%;text-transform:uppercase;
 <!-- ================= HOME ================= -->
 <section class="screen" id="scr-home">
   <div class="wrap">
-    <div class="cat"><span class="mono">FA-006 · ℗ 2026</span><span class="mono">El Invitado Records</span></div>
+    <div class="cat"><span class="mono">FA-007 · ℗ 2026</span><span class="mono">El Invitado Records</span></div>
     <h1 class="logo" aria-label="Feat Arena"><span class="w" aria-hidden="true">Feat</span><span class="w out" aria-hidden="true">Arena</span><span class="ft" aria-hidden="true">ft.</span></h1>
     <p class="tagline">Suena un tema. Tú dices con quién ha colaborado el artista y en qué canción. El siguiente sigue la cadena.</p>
     <ol class="credits" aria-label="Así suena una partida">
@@ -371,6 +371,21 @@ h2.h{font:900 34px/.95 var(--f-wide);font-stretch:125%;text-transform:uppercase;
   </div>
 </section>
 
+<!-- ================= WARM-UP ================= -->
+<section class="ov dim" id="ov-warm" hidden role="dialog" aria-modal="true" aria-labelledby="warm-t">
+  <div class="wrap">
+    <div class="cat"><span class="mono" id="warm-t">Prueba de sonido</span><button class="link" id="warm-x" style="padding:0">Cancelar</button></div>
+    <div class="sheet-box" style="margin-top:28px">
+      <div class="host" style="margin-top:0"><div class="label spin" aria-hidden="true"><span>ft.</span></div><div><b>Antes de pinchar</b><span class="r" id="warm-st" aria-live="polite">Todavía no oigo nada.</span></div></div>
+      <p class="vsub" style="margin-top:18px">Pon cualquier canción en Spotify, en este móvil, y vuelve aquí. Empiezo en cuanto la oiga.</p>
+    </div>
+    <div class="stack" style="margin-top:16px">
+      <a class="cta" href="https://open.spotify.com/" target="_blank" rel="noopener" style="text-decoration:none">Abrir Spotify</a>
+      <button class="ghost" id="warm-skip">Empezar igualmente</button>
+    </div>
+  </div>
+</section>
+
 <!-- ================= PAUSE ================= -->
 <section class="ov dim" id="ov-pause" hidden role="dialog" aria-modal="true" aria-labelledby="pause-t">
   <div class="wrap">
@@ -460,7 +475,7 @@ const SP={
   lastErr:'',
   async diag(){
     const L=[];const em=r=>r&&r.data&&r.data.error?(r.data.error.reason||r.data.error.message||''):'';
-    L.push('Versión: FA-006');L.push('Dirección: '+location.origin+location.pathname);
+    L.push('Versión: FA-007');L.push('Dirección: '+location.origin+location.pathname);
     L.push('Móvil: '+(/iPhone|iPad/.test(navigator.userAgent)?'iPhone':/Android/.test(navigator.userAgent)?'Android':'otro')+' · '+(navigator.userAgent.match(/(CriOS|FxiOS|EdgiOS|Chrome|Firefox|Version)\/[\d.]+/)||[''])[0]);
     if(!this.ready){L.push('Spotify: no conectado');return L.join('\n');}
     try{
@@ -690,7 +705,7 @@ function renderSetup(){
   $('#set-rules').innerHTML=`<div class="wrow"><div><b>Artista y canción</b><p>Además de con quién, hay que decir el título del tema. Si lo apagas, basta con el artista.</p></div><button class="sw" data-rule="song" role="switch" aria-checked="${!!cfg.song}" aria-label="Exigir la canción"></button></div>`;
   $('#set-wild').innerHTML=Object.keys(WILD).map(k=>`<div class="wrow"><div><b>${WILD[k].name}</b><p>${WILD[k].desc}</p></div><button class="sw" data-wild="${k}" role="switch" aria-checked="${!!cfg.wild[k]}" aria-label="${WILD[k].name}"></button></div>`).join('');
   $('#set-go').textContent=m==='spotify'?'Pinchar el primer tema':'Sacar el primer artista';
-  $('#set-note').textContent=m==='spotify'?'El primer tema sonará en el Spotify de este móvil. Antes de empezar, abre Spotify y pon cualquier canción: así el juego lo encuentra.':'Sin Spotify conectado: el grupo hace de jurado y decide si cada feat existe.';
+  $('#set-note').textContent=m==='spotify'?'El primer tema sonará en el Spotify de este móvil. Si Spotify no está sonando, te avisaré antes de empezar.':'Sin Spotify conectado: el grupo hace de jurado y decide si cada feat existe.';
 }
 $('#set-players').addEventListener('input',e=>{const m=e.target.id.match(/^pl-(\d)$/);if(m){cfg.players[+m[1]]=e.target.value;ls.set('fa.cfg',cfg);}});
 $('#set-players').addEventListener('click',e=>{const b=e.target.closest('[data-rm]');if(b){cfg.players.splice(+b.dataset.rm,1);ls.set('fa.cfg',cfg);renderSetup();}});
@@ -700,7 +715,26 @@ $('#set-time').onclick=e=>{const b=e.target.closest('button');if(b){cfg.time=+b.
 $('#set-pack').onclick=e=>{const b=e.target.closest('button');if(b&&!b.disabled){cfg.pack=b.dataset.pk;ls.set('fa.cfg',cfg);renderSetup();}};
 $('#set-wild').onclick=e=>{const b=e.target.closest('[data-wild]');if(b){cfg.wild[b.dataset.wild]=!cfg.wild[b.dataset.wild];ls.set('fa.cfg',cfg);renderSetup();}};
 $('#set-rules').onclick=e=>{const b=e.target.closest('[data-rule]');if(b){cfg.song=!cfg.song;ls.set('fa.cfg',cfg);renderSetup();}};
-$('#set-go').onclick=startGame;
+let warmT=null,warmCb=null,warmBusy=false;
+async function spotifyLive(){try{const r=await SP.api('/me/player');if(r.ok&&r.data&&r.data.is_playing&&r.data.device){SP.dev=r.data.device.id||SP.dev;return r.data.device.name||'tu móvil';}}catch(e){}return null;}
+async function warmup(cb){
+  if(warmBusy)return;warmBusy=true;
+  const name=await spotifyLive();warmBusy=false;
+  if(name){cb();return;}
+  warmCb=cb;$('#warm-st').textContent='Todavía no oigo nada.';$('#ov-warm').hidden=false;
+  clearInterval(warmT);warmT=setInterval(warmPoll,2000);
+}
+async function warmPoll(){
+  if(warmBusy||!warmCb||$('#ov-warm').hidden||document.hidden)return;
+  warmBusy=true;const n=await spotifyLive();warmBusy=false;
+  if(n&&warmCb){const cb=warmCb;warmCb=null;clearInterval(warmT);$('#warm-st').textContent='Sonando en '+n+'. Allá vamos.';buzz(20);setTimeout(()=>{$('#ov-warm').hidden=true;cb();},800);}
+}
+function closeWarm(){clearInterval(warmT);warmT=null;warmCb=null;$('#ov-warm').hidden=true;}
+$('#warm-x').onclick=closeWarm;
+$('#warm-skip').onclick=()=>{const cb=warmCb;closeWarm();cb&&cb();};
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!$('#ov-warm').hidden)setTimeout(warmPoll,400);});
+const launch=()=>mode()==='spotify'?warmup(startGame):startGame();
+$('#set-go').onclick=launch;
 
 /* ================= game: lifecycle ================= */
 let tick=null,wakeLock=null;
@@ -1061,7 +1095,7 @@ $('#pause-go').onclick=()=>{$('#ov-pause').hidden=true;resumeClock();if(G.phase=
 $('#pause-skip').onclick=()=>{$('#ov-pause').hidden=true;G.paused=false;newRecord(false);};
 let endArmed=false;
 $('#pause-end').onclick=e=>{const b=e.currentTarget;if(!endArmed){endArmed=true;b.textContent='Toca otra vez para terminar';setTimeout(()=>{endArmed=false;b.textContent='Terminar la partida';},3500);return;}endArmed=false;$('#ov-pause').hidden=true;gameOver();};
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!$('#ov-intro').hidden)closeIntro();else if(!$('#ov-sp').hidden)$('#ov-sp').hidden=true;else if(!$('#ov-pause').hidden)$('#pause-go').click();}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!$('#ov-warm').hidden)closeWarm();else if(!$('#ov-intro').hidden)closeIntro();else if(!$('#ov-sp').hidden)$('#ov-sp').hidden=true;else if(!$('#ov-pause').hidden)$('#pause-go').click();}});
 
 /* ================= over ================= */
 let lastG=null;
@@ -1086,7 +1120,7 @@ function renderOver(){
   $('#o-save').hidden=!(SP.ready&&uris.length);
   $('#o-save').onclick=async()=>{const b=$('#o-save');b.disabled=true;b.textContent='Guardando…';try{await SP.savePlaylist(`Feat Arena · ${d}`,uris);b.textContent='Guardada en tu Spotify';toast('Mixtape guardada en tu Spotify.');}catch(e){b.disabled=false;b.textContent='Guardar la mixtape en Spotify';toast('No se pudo guardar. Inténtalo otra vez.');}};
 }
-$('#o-again').onclick=()=>{if(lastG){cfg.players=lastG.players.map(p=>p.name);ls.set('fa.cfg',cfg);}startGame();};
+$('#o-again').onclick=()=>{if(lastG){cfg.players=lastG.players.map(p=>p.name);ls.set('fa.cfg',cfg);}launch();};
 $('#o-copy').onclick=()=>{
   const g=lastG;if(!g)return;
   const txt='Feat Arena · Mixtape\n'+g.chain.map(L=>`${pad(L.n)}. ${L.a.name} ft. ${L.b.name}${L.track?' · '+L.track.name:L.song?' · '+L.song:''}`).join('\n');
