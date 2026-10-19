@@ -260,6 +260,64 @@ h2.h{font:900 34px/.95 var(--f-wide);font-stretch:125%;text-transform:uppercase;
 .count .n{font:900 min(72vw,440px)/.8 var(--f-wide);font-stretch:125%;letter-spacing:-.04em;color:var(--p)}
 .count .n.word{font-size:min(19vw,120px);line-height:.95;letter-spacing:-.02em}
 .count .sub{font:italic 500 20px/1.2 var(--f-ital);color:var(--dust)}
+/* host character */
+.host-svg{display:block;overflow:visible}
+.host-svg .jacket{fill:#3A3546}.host-svg .collar{fill:#2A2633}.host-svg .shirt{fill:var(--bone)}.host-svg .neck{fill:#2A2633}
+.host-svg .chain{fill:none;stroke:#E8B33A;stroke-width:3;stroke-linecap:round}.host-svg .pend{fill:#E8B33A}
+.host-svg .pend-t{font:italic 700 11px var(--f-ital);fill:#131217}
+.host-svg .rec{fill:#0E0D12;stroke:#3A3746;stroke-width:2}.host-svg .grooves circle{fill:none;stroke:#201E27;stroke-width:1.5}
+.host-svg .shine{transform-box:view-box;transform-origin:100px 92px;animation:spin 3.2s linear infinite}.host-svg .shine path{fill:rgba(255,255,255,.08)}
+.host-svg .lab{fill:var(--p)}.host-svg .hole{fill:#131217}
+.host-svg .face path{fill:none;stroke:#131217;stroke-width:2.8;stroke-linecap:round;stroke-linejoin:round}
+.host-svg .face .fill{fill:#131217;stroke:none}
+.host-svg .bob{transform-box:view-box;animation:bob 2.6s ease-in-out infinite}
+.host-svg .blink{transform-box:view-box;transform-origin:100px 86px;animation:blink 4.4s infinite}
+@keyframes bob{50%{transform:translateY(-3px)}}
+@keyframes blink{0%,93%,100%{transform:scaleY(1)}95%{transform:scaleY(.1)}}
+.host-svg .x{display:none}
+.host-svg[data-mood="neutral"] .m-neutral,.host-svg[data-mood="happy"] .m-happy,.host-svg[data-mood="angry"] .m-angry,.host-svg[data-mood="doubt"] .m-doubt,.host-svg[data-mood="wow"] .m-wow{display:inline}
+.host-svg.talk .mo{animation:mm .26s steps(1) infinite}.host-svg .mt{display:none}.host-svg.talk .mt{display:inline;animation:mt .26s steps(1) infinite}
+@keyframes mm{0%{opacity:1}50%{opacity:0}}@keyframes mt{0%{opacity:0}50%{opacity:1}}
+/* speech bubbles */
+.bub{position:relative;background:var(--bone);color:var(--ink);border-radius:22px;padding:15px 17px;font:500 17px/1.45 var(--f-wide);box-shadow:0 12px 30px -14px rgba(0,0,0,.7);cursor:default}
+.bub b{font-weight:800}.bub em{font:italic 700 1.1em/1 var(--f-ital)}
+.bub.big{font-size:19px;min-height:7.6em}
+.bub::after{content:"";position:absolute;left:clamp(56px,16vw,78px);bottom:-15px;border-left:12px solid transparent;border-right:12px solid transparent;border-top:16px solid var(--bone)}
+.bub.left::after{left:-13px;top:24px;bottom:auto;border:0;border-top:11px solid transparent;border-bottom:11px solid transparent;border-right:16px solid var(--bone)}
+.bub .vword{display:block;font:italic 700 34px/1 var(--f-ital);margin-bottom:6px}
+.bub .vword.bad{color:#B3261E}
+.stage{flex:1;display:flex;flex-direction:column;justify-content:flex-end;gap:16px;margin-top:16px}
+.stage-host{display:flex;align-items:flex-end;gap:14px}
+.stage-host .host-svg{width:min(44vw,180px);height:auto;flex:none}
+.nameplate{padding-bottom:18px;min-width:0}
+.nameplate b{display:block;font:900 20px/1 var(--f-wide);font-stretch:125%;text-transform:uppercase}
+.nameplate span{display:block;font:italic 500 15px/1.3 var(--f-ital);color:var(--dust);margin-top:5px}
+.say{display:grid;grid-template-columns:78px minmax(0,1fr);gap:12px;align-items:start}
+.say .host-svg{width:78px;height:auto}
+/* countdown */
+.count{overflow:hidden;padding-bottom:16vh}
+.cd-disc{position:absolute;left:50%;top:42%;width:140vmax;height:140vmax;margin:-70vmax 0 0 -70vmax;border-radius:50%;background:radial-gradient(circle,var(--p) 0 8%,#0b0b0e 8.4% 9.6%,transparent 10%),repeating-radial-gradient(circle,#1a1920 0 2px,#0d0c10 2px 5px);opacity:.45;animation:spin 1.8s linear infinite;transition:opacity .12s}
+.cd-disc::after{content:"";position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 0deg,transparent 0 8%,rgba(255,255,255,.08) 12%,transparent 18% 58%,rgba(255,255,255,.06) 62%,transparent 68%)}
+.count.pulse .cd-disc{opacity:.75}
+.count .nw{position:relative;z-index:2;transition:transform .12s ease-out}
+.count.pulse .nw{transform:scale(1.07)}
+.cd-flash{position:absolute;inset:0;background:var(--p);opacity:0;z-index:1;pointer-events:none}
+.cd-flash.go{animation:flash .55s ease-out}
+@keyframes flash{0%{opacity:.6}100%{opacity:0}}
+.count .n{display:block;text-shadow:0 0 70px color-mix(in srgb,var(--p) 60%,transparent)}
+.count .n.slam{animation:slam .62s cubic-bezier(.2,1.5,.35,1)}
+@keyframes slam{0%{transform:scale(3) rotate(-14deg);opacity:0;filter:blur(12px)}55%{opacity:1;filter:blur(0)}100%{transform:none}}
+.count.shake{animation:shake .34s}
+#cd-rings{position:absolute;left:50%;top:42%;width:0;height:0;z-index:1}
+.ring{position:absolute;left:-30vmin;top:-30vmin;width:60vmin;height:60vmin;border-radius:50%;border:7px solid var(--p);animation:ring .95s ease-out forwards}
+@keyframes ring{from{transform:scale(.25);opacity:.95}to{transform:scale(2.5);opacity:0}}
+.chip{position:absolute;width:26px;height:26px;margin:-13px;border-radius:50%;background:radial-gradient(circle,var(--night) 0 12%,var(--c) 13% 40%,#0b0b0e 42%);animation:chip 1.25s cubic-bezier(.15,.8,.3,1) forwards}
+@keyframes chip{to{transform:translate(var(--dx),var(--dy)) rotate(600deg);opacity:0}}
+.cd-host{position:absolute;bottom:0;left:50%;width:min(50vw,210px);transform:translate(-50%,115%);transition:transform .5s cubic-bezier(.2,1.4,.4,1);z-index:3;margin-bottom:calc(-12% + env(safe-area-inset-bottom,0px))}
+.cd-host.up{transform:translate(-50%,0)}
+.cd-host .host-svg{width:100%;height:auto}
+.count .sub{position:relative;z-index:2;font-size:22px;letter-spacing:.02em}
+@media (prefers-reduced-motion:reduce){.host-svg *,.count *,.count{animation:none!important;transition:none!important}}
 .toast{position:fixed;left:50%;top:calc(12px + env(safe-area-inset-top,0px));z-index:90;transform:translate(-50%,-14px);opacity:0;pointer-events:none;width:max-content;max-width:calc(100% - 32px);background:var(--bone);color:var(--ink);padding:11px 16px;border-radius:12px;font:600 14px/1.35 var(--f-wide);transition:opacity .2s,transform .2s;text-align:center}
 .toast.in{opacity:1;transform:translate(-50%,0)}
 </style>
@@ -267,7 +325,7 @@ h2.h{font:900 34px/.95 var(--f-wide);font-stretch:125%;text-transform:uppercase;
 <!-- ================= HOME ================= -->
 <section class="screen" id="scr-home">
   <div class="wrap">
-    <div class="cat"><span class="mono">FA-011 · ℗ 2026</span><span class="mono">El Invitado Records</span></div>
+    <div class="cat"><span class="mono">FA-012 · ℗ 2026</span><span class="mono">El Invitado Records</span></div>
     <h1 class="logo" aria-label="Feat Arena"><span class="w" aria-hidden="true">Feat</span><span class="w out" aria-hidden="true">Arena</span><span class="ft" aria-hidden="true">ft.</span></h1>
     <p class="tagline">Suena un tema. Tú dices con quién ha colaborado el artista y en qué canción. El siguiente sigue la cadena.</p>
     <ol class="credits" aria-label="Así suena una partida">
@@ -368,8 +426,10 @@ h2.h{font:900 34px/.95 var(--f-wide);font-stretch:125%;text-transform:uppercase;
 <section class="ov" id="ov-intro" hidden role="dialog" aria-modal="true" aria-labelledby="intro-t">
   <div class="wrap">
     <div class="cat"><span class="mono" id="intro-t">00 · Intro (skit)</span><button class="link" id="intro-skip" style="padding:0">Saltar</button></div>
-    <div class="host"><div class="label spin" aria-hidden="true"><span>ft.</span></div><div><b>El Invitado</b><span class="r">Presentador. Ha colaborado con todo el mundo.</span></div></div>
-    <div class="lines" id="intro-lines" aria-live="polite"></div>
+    <div class="stage">
+      <div class="bub big" id="intro-bub" aria-live="polite"></div>
+      <div class="stage-host"><div id="intro-host"></div><div class="nameplate"><b>El Invitado</b><span>Presentador. Ha colaborado con todo el mundo.</span></div></div>
+    </div>
     <div class="dots" id="intro-dots" aria-hidden="true"></div>
     <button class="cta" id="intro-next">Sigue</button>
   </div>
@@ -379,18 +439,13 @@ h2.h{font:900 34px/.95 var(--f-wide);font-stretch:125%;text-transform:uppercase;
 <section class="ov dim" id="ov-warm" hidden role="dialog" aria-modal="true" aria-labelledby="warm-t">
   <div class="wrap">
     <div class="cat"><span class="mono" id="warm-t">Prueba de sonido</span><button class="link" id="warm-x" style="padding:0">Cancelar</button></div>
-    <div class="sheet-box" style="margin-top:28px">
-      <div class="host" style="margin-top:0"><div class="label spin" aria-hidden="true"><span>ft.</span></div><div><b>Antes de pinchar</b><span class="r" id="warm-st" aria-live="polite">Todavía no oigo nada.</span></div></div>
-      <ol class="steps" style="margin-top:18px">
-        <li><span><b>Toca «Pinchar la intro».</b> Se abrirá Spotify con la canción.</span></li>
-        <li><span><b>Dale al play</b> en Spotify.</span></li>
-        <li><span><b>Vuelve a esta pantalla.</b> En cuanto oiga la música, arranca la cuenta atrás.</span></li>
-      </ol>
+    <div class="stage">
+      <div class="bub big" id="warm-bub" aria-live="polite"></div>
+      <div class="stage-host"><div id="warm-host"></div><div class="nameplate"><b>El Invitado</b><span>Antes de pinchar</span></div></div>
     </div>
-    <div class="stack" style="margin-top:16px">
-      <a class="cta" href="https://open.spotify.com/track/3MrRksHupTVEQ7YbA0FsZK" target="_blank" rel="noopener" style="text-decoration:none;flex-direction:column;gap:6px"><span>Pinchar la intro</span><span style="font:italic 500 15px/1 var(--f-ital);text-transform:none;letter-spacing:0">The Final Countdown · Europe</span></a>
-      <p class="mono" style="text-align:center;color:var(--dust);margin:2px 0 6px">↩ Tras darle al play, vuelve aquí</p>
-      <button class="ghost" id="warm-skip">Empezar igualmente</button>
+    <div class="stack" style="margin-top:18px">
+      <a class="cta" id="warm-go" href="https://open.spotify.com/track/3MrRksHupTVEQ7YbA0FsZK" target="_blank" rel="noopener" style="text-decoration:none;flex-direction:column;gap:6px"><span>Pinchar la intro</span><span style="font:italic 500 15px/1 var(--f-ital);text-transform:none;letter-spacing:0">The Final Countdown · Europe</span></a>
+      <button class="ghost" id="warm-skip">Empezar sin intro</button>
     </div>
   </div>
 </section>
@@ -418,7 +473,7 @@ h2.h{font:900 34px/.95 var(--f-wide);font-stretch:125%;text-transform:uppercase;
   </div>
 </section>
 
-<div class="count" id="count" hidden aria-live="assertive"><span class="sub" id="count-sub">The Final Countdown</span><span class="n" id="count-n">3</span></div>
+<div class="count" id="count" hidden aria-live="assertive"><div class="cd-disc" aria-hidden="true"></div><div class="cd-flash" id="cd-flash"></div><div id="cd-rings" aria-hidden="true"></div><span class="sub" id="count-sub">The Final Countdown</span><div class="nw"><span class="n" id="count-n">3</span></div><div class="cd-host" id="cd-host" aria-hidden="true"></div></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
@@ -485,7 +540,7 @@ const SP={
   lastErr:'',
   async diag(){
     const L=[];const em=r=>r&&r.data&&r.data.error?(r.data.error.reason||r.data.error.message||''):'';
-    L.push('Versión: FA-011');L.push('Dirección: '+location.origin+location.pathname);
+    L.push('Versión: FA-012');L.push('Dirección: '+location.origin+location.pathname);
     L.push('Móvil: '+(/iPhone|iPad/.test(navigator.userAgent)?'iPhone':/Android/.test(navigator.userAgent)?'Android':'otro')+' · '+(navigator.userAgent.match(/(CriOS|FxiOS|EdgiOS|Chrome|Firefox|Version)\/[\d.]+/)||[''])[0]);
     if(!this.ready){L.push('Spotify: no conectado');return L.join('\n');}
     try{
@@ -648,6 +703,53 @@ $('#home-intro').onclick=()=>openIntro();
 $('#home-spotify').onclick=()=>openSpotify();
 
 /* ================= intro ================= */
+function hostSVG(mood){return`<svg class="host-svg" data-mood="${mood||'neutral'}" viewBox="0 0 200 240" aria-hidden="true"><g class="bob">
+<path class="jacket" d="M20 244C24 206 44 184 70 177L130 177C156 184 176 206 180 244Z"/>
+<path class="shirt" d="M84 177L100 207L116 177Z"/>
+<path class="collar" d="M70 177L87 202L97 181ZM130 177L113 202L103 181Z"/>
+<path class="chain" d="M83 179Q100 216 117 179"/>
+<circle class="pend" cx="100" cy="208" r="10"/><text class="pend-t" x="100" y="212" text-anchor="middle">ft.</text>
+<rect class="neck" x="90" y="158" width="20" height="24" rx="6"/>
+<circle class="rec" cx="100" cy="92" r="72"/>
+<g class="grooves"><circle cx="100" cy="92" r="65"/><circle cx="100" cy="92" r="58"/><circle cx="100" cy="92" r="51"/><circle cx="100" cy="92" r="44"/></g>
+<g class="shine"><path d="M100 20A72 72 0 0 1 162 56L100 92Z"/><path d="M100 164A72 72 0 0 1 38 128L100 92Z"/></g>
+<circle class="lab" cx="100" cy="92" r="36"/>
+<g class="face">
+<g class="x m-neutral m-angry m-doubt"><g class="blink"><ellipse class="fill" cx="89" cy="86" rx="3.4" ry="4.6"/><ellipse class="fill" cx="111" cy="86" rx="3.4" ry="4.6"/></g></g>
+<g class="x m-happy"><path d="M84 88q5-6 10 0"/><path d="M106 88q5-6 10 0"/></g>
+<g class="x m-wow"><circle class="fill" cx="89" cy="86" r="5"/><circle class="fill" cx="111" cy="86" r="5"/><circle cx="90.6" cy="84.4" r="1.6" fill="#EFEAE1"/><circle cx="112.6" cy="84.4" r="1.6" fill="#EFEAE1"/></g>
+<g class="x m-neutral m-happy"><path d="M84 77q5-3 10 0"/><path d="M106 77q5-3 10 0"/></g>
+<g class="x m-wow"><path d="M84 73q5-4 10 0"/><path d="M106 73q5-4 10 0"/></g>
+<g class="x m-angry"><path d="M84 75l10 4"/><path d="M116 75l-10 4"/></g>
+<g class="x m-doubt"><path d="M84 79h10"/><path d="M106 75q5-5 10-2"/></g>
+<circle class="hole" cx="100" cy="94" r="2.6"/>
+<path class="x mo m-neutral" d="M91 105q9 8 18 0"/>
+<path class="x mo m-happy fill" d="M87 102h26q0 14-13 14q-13 0-13-14Z"/>
+<path class="x mo m-angry" d="M91 111q9-7 18 0"/>
+<path class="x mo m-doubt" d="M93 108l14-2"/>
+<ellipse class="x mo m-wow fill" cx="100" cy="109" rx="4.6" ry="6"/>
+<ellipse class="mt fill" cx="100" cy="107" rx="7" ry="5.4"/>
+</g></g></svg>`;}
+function finishSpeak(bub){if(bub&&bub._fin)bub._fin();}
+function speak(bub,svg,html,mood){
+  if(!bub)return;finishSpeak(bub);
+  if(svg&&mood)svg.dataset.mood=mood;
+  bub.innerHTML=html;
+  if(reduce())return;
+  const nodes=[];const walk=n=>n.childNodes.forEach(c=>{if(c.nodeType===3){nodes.push([c,c.textContent]);c.textContent='';}else walk(c);});walk(bub);
+  let i=0,j=0;if(svg)svg.classList.add('talk');
+  const done=()=>{clearInterval(bub._t);bub._t=null;nodes.forEach(([c,t])=>c.textContent=t);if(svg)svg.classList.remove('talk');bub._fin=null;};
+  bub._fin=done;
+  bub._t=setInterval(()=>{if(i>=nodes.length)return done();const [c,t]=nodes[i];j+=2;c.textContent=t.slice(0,j);if(j>=t.length){i++;j=0;}},26);
+}
+const SAID=new Set();
+function animateSays(root){root.querySelectorAll('.bub[data-k]').forEach(b=>{const k=b.dataset.k;if(SAID.has(k))return;SAID.add(k);speak(b,b.parentNode.querySelector('svg'),b.innerHTML,null);});}
+const pickS=(a,n)=>a[Math.abs(n)%a.length];
+const QUIP={ok:['Eso sí que es un feat.','Lo pincho ya mismo.','Buen oído. Esa la tengo en vinilo.','Química de estudio, sí señor.','Ni yo lo habría dicho mejor.'],
+  wrong:['Ese feat no lo firma nadie.','Eso no existe ni en un remix pirata.','Me lo apunto para mi próximo disco, porque hoy no existe.'],
+  time:['Se te ha comido el reloj.','El silencio también es música, pero no puntúa.'],
+  giveup:['Rendirse es cosa de solistas.','Retirada a tiempo. Más o menos.']};
+const INTRO_MOOD=['happy','neutral','doubt','neutral','angry','doubt','wow','happy'];
 const INTRO=[
   'Igual no me conocéis por la cara, pero me habéis oído mil veces. Soy <b>El Invitado</b>.',
   'Nunca he sacado un disco propio. No me ha hecho falta. Mi nombre va siempre después del <em>ft.</em>: en el temazo del verano, en la canción de vuestra boda, en ese remix que nadie pidió.',
@@ -659,14 +761,15 @@ const INTRO=[
   'Si nadie consigue nada con un artista, cambio de disco y a otra cosa. Al final os doy la mixtape con todo lo que ha sonado, en orden. Pasaos el móvil. Empieza la sesión.'
 ];
 let introI=0;
-function openIntro(){introI=0;$('#ov-intro').hidden=false;document.body.style.overflow='hidden';$('#intro-dots').innerHTML=INTRO.map(()=>'<i></i>').join('');renderIntro();setTimeout(()=>$('#intro-next').focus(),50);}
+function openIntro(){introI=0;$('#ov-intro').hidden=false;document.body.style.overflow='hidden';$('#intro-host').innerHTML=hostSVG('happy');$('#intro-dots').innerHTML=INTRO.map(()=>'<i></i>').join('');renderIntro();setTimeout(()=>$('#intro-next').focus(),50);}
 function renderIntro(){
-  $('#intro-lines').innerHTML=INTRO.slice(Math.max(0,introI-1),introI+1).map((l,i,arr)=>`<p class="${i===arr.length-1?'cur stamp':''}">${l}</p>`).join('');
+  speak($('#intro-bub'),$('#intro-host svg'),INTRO[introI],INTRO_MOOD[introI]||'neutral');
   [...$('#intro-dots').children].forEach((d,i)=>d.classList.toggle('on',i<=introI));
   $('#intro-next').textContent=introI===INTRO.length-1?'A jugar':'Sigue';
 }
-function closeIntro(){$('#ov-intro').hidden=true;document.body.style.overflow='';ls.set('fa.intro',1);}
-$('#intro-next').onclick=()=>{if(introI<INTRO.length-1){introI++;renderIntro();}else{closeIntro();if(!G){renderSetup();show('scr-setup');}}};
+function closeIntro(){finishSpeak($('#intro-bub'));$('#ov-intro').hidden=true;document.body.style.overflow='';ls.set('fa.intro',1);}
+$('#intro-bub').onclick=()=>finishSpeak($('#intro-bub'));
+$('#intro-next').onclick=()=>{if($('#intro-bub')._fin){finishSpeak($('#intro-bub'));return;}if(introI<INTRO.length-1){introI++;renderIntro();}else{closeIntro();if(!G){renderSetup();show('scr-setup');}}};
 $('#intro-skip').onclick=closeIntro;
 
 /* ================= spotify sheet ================= */
@@ -732,28 +835,50 @@ async function introCountdown(cb){
   const isIntro=warmItem&&(warmItem.uri===INTRO_URI||/final countdown/i.test(warmItem.name||''));
   if(!isIntro){$('#ov-warm').hidden=true;cb();return;}
   if(warmItem.uri===INTRO_URI||(warmItem.duration_ms||0)>INTRO_RIFF_MS)await SP.api('/me/player/seek?position_ms='+INTRO_RIFF_MS+(SP.dev?'&device_id='+encodeURIComponent(SP.dev):''),{method:'PUT'}).catch(()=>{});
-  const box=$('#count'),num=$('#count-n'),sub=$('#count-sub');
-  const show=(t,word)=>{num.textContent=t;num.classList.toggle('word',!!word);num.classList.remove('stamp');void num.offsetWidth;num.classList.add('stamp');};
-  $('#ov-warm').hidden=true;box.hidden=false;sub.textContent='The Final Countdown';show('Que empiece',true);
-  let n=3;const step=Math.round(INTRO_HOLD_MS/4);
-  const tick=setInterval(()=>{if(n>0){show(String(n));buzz(25);n--;}else{clearInterval(tick);sub.textContent='Feat Arena';show('¡A pinchar!',true);buzz([40,40,80]);setTimeout(()=>{box.hidden=true;cb();},900);}},step);
+  const box=$('#count'),num=$('#count-n'),sub=$('#count-sub'),hb=$('#cd-host'),rings=$('#cd-rings'),fl=$('#cd-flash');
+  hb.innerHTML=hostSVG('wow');const hs=hb.querySelector('svg');
+  $('#ov-warm').hidden=true;box.hidden=false;sub.textContent='The Final Countdown';
+  requestAnimationFrame(()=>requestAnimationFrame(()=>hb.classList.add('up')));
+  const kick=el=>{el.classList.remove(el._k);void el.offsetWidth;el.classList.add(el._k);};
+  num._k='slam';fl._k='go';box._k='shake';
+  const slam=(t,word)=>{num.textContent=t;num.classList.toggle('word',!!word);kick(num);kick(fl);kick(box);
+    const ring=document.createElement('i');ring.className='ring';rings.appendChild(ring);setTimeout(()=>ring.remove(),1000);
+    hs.classList.add('talk');setTimeout(()=>hs.classList.remove('talk'),450);};
+  const BEAT=508,BAR=BEAT*4;
+  const beat=setInterval(()=>{box.classList.add('pulse');setTimeout(()=>box.classList.remove('pulse'),140);},BEAT);
+  const seq=[['Que empiece',1,'wow'],['3',0,'wow'],['2',0,'wow'],['1',0,'happy'],['¡A pinchar!',1,'happy']];
+  let i=0;
+  const next=()=>{const [t,w,m]=seq[i];hs.dataset.mood=m;slam(t,w);
+    if(i===seq.length-1){buzz([40,40,90]);sub.textContent='Feat Arena';
+      for(let k=0;k<18;k++){const d=document.createElement('b');d.className='chip';const a=Math.random()*Math.PI*2,rr=150+Math.random()*200;d.style.setProperty('--dx',Math.cos(a)*rr+'px');d.style.setProperty('--dy',Math.sin(a)*rr+'px');d.style.setProperty('--c',PRESS[k%PRESS.length]);rings.appendChild(d);setTimeout(()=>d.remove(),1300);}
+      setTimeout(()=>{clearInterval(beat);hb.classList.remove('up');box.hidden=true;rings.innerHTML='';cb();},1400);return;}
+    buzz(30);i++;setTimeout(next,BAR);};
+  next();
 }
+const WARM={start:'Te abro Spotify con mi canción de entrada. <b>Tú vuelve aquí volando</b>, que la cuenta atrás no espera a nadie. Y yo menos.',
+  back:'¿Ya estás? Dame un segundo, que estoy afinando el oído…',
+  still:'Sigo sin oír nada. ¿Seguro que ha arrancado? Si no, dale al botón otra vez.',
+  heard:'¡Eso es! Ahí está mi tema. <em>Que empiece…</em>'};
+let warmMiss=0;
+const wb=()=>$('#warm-bub'),wh=()=>$('#warm-host svg');
 async function warmup(cb){
   if(warmBusy)return;warmBusy=true;
   const name=await spotifyLive();warmBusy=false;
   if(name){cb();return;}
-  warmCb=cb;$('#warm-st').textContent='Todavía no oigo nada.';$('#ov-warm').hidden=false;
+  warmCb=cb;warmMiss=0;$('#warm-host').innerHTML=hostSVG('happy');$('#ov-warm').hidden=false;
+  speak(wb(),wh(),WARM.start,'happy');
   clearInterval(warmT);warmT=setInterval(warmPoll,2000);
 }
 async function warmPoll(){
   if(warmBusy||!warmCb||$('#ov-warm').hidden||document.hidden)return;
   warmBusy=true;const n=await spotifyLive();warmBusy=false;
-  if(n&&warmCb){const cb=warmCb;warmCb=null;clearInterval(warmT);$('#warm-st').textContent='Sonando en '+n+'.';buzz(20);introCountdown(cb);}
+  if(n&&warmCb){const cb=warmCb;warmCb=null;clearInterval(warmT);speak(wb(),wh(),WARM.heard,'wow');buzz(20);setTimeout(()=>introCountdown(cb),1300);}
+  else if(warmCb&&warmMiss>0){warmMiss++;if(warmMiss===4)speak(wb(),wh(),WARM.still,'doubt');}
 }
-function closeWarm(){clearInterval(warmT);warmT=null;warmCb=null;$('#ov-warm').hidden=true;}
+function closeWarm(){clearInterval(warmT);warmT=null;warmCb=null;finishSpeak(wb());$('#ov-warm').hidden=true;}
 $('#warm-x').onclick=closeWarm;
 $('#warm-skip').onclick=()=>{const cb=warmCb;closeWarm();cb&&cb();};
-document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!$('#ov-warm').hidden)setTimeout(warmPoll,400);});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!$('#ov-warm').hidden&&warmCb){warmMiss=1;speak(wb(),wh(),WARM.back,'doubt');setTimeout(warmPoll,400);}});
 const launch=()=>mode()==='spotify'?warmup(startGame):startGame();
 $('#set-go').onclick=launch;
 
@@ -969,7 +1094,7 @@ function renderGame(){
   $('#g-wild').hidden=!$('#g-wild').innerHTML;
   // panel
   const pan=$('#g-panel');pan.hidden=!['ok','fail','notfound','judge'].includes(G.phase);
-  if(!pan.hidden)pan.innerHTML=panelHTML();
+  if(!pan.hidden){pan.innerHTML=panelHTML();animateSays(pan);}
   wirePanel();
   renderClock();renderChain();
 }
@@ -977,32 +1102,36 @@ function nextName(){const al=G.players.filter(q=>q.lives>0);if(al.length<=1)retu
 function panelHTML(){
   const p=cur(),nx=nextName();
   const nextBtn=nx?`<button class="cta" id="pn-next">Le toca a ${esc(nx)}</button>`:`<button class="cta" id="pn-next">Ver la mixtape</button>`;
+  const seed=G.chain.length+G.players.reduce((a,q)=>a+q.lives,0);
+  const say=(mood,key,inner)=>`<div class="say">${hostSVG(mood)}<div class="bub left" data-k="${G.id}-${key}">${inner}</div></div>`;
   if(G.phase==='ok'){
     const L=G.chain[G.chain.length-1];const t=L.track;
     const alts=L.alts&&L.alts.length>1?`<div class="alts" role="group" aria-label="Otras versiones">${L.alts.map((a,i)=>`<button data-alt="${i}" aria-pressed="${a.id===t.id}">${esc(a.name)}</button>`).join('')}</div>`:'';
-    return`<p class="verdict stamp">Existe.</p>
+    return`${say('happy','ok'+G.chain.length,`<span class="vword">Existe.</span>${pickS(QUIP.ok,seed)}`)}
       ${t?`<div class="card">${t.img?`<img src="${esc(t.img)}" alt="">`:`<span class="disc" style="--c:${p.color}"></span>`}<div><b>${esc(t.name)}</b><span>${esc(t.artists.map(a=>a.name).join(', '))}</span></div></div>${alts}`:`<p class="vsub">${L.override?'El grupo lo da por bueno.':'Validado por el jurado.'} <b>${esc(L.a.name)} ft. ${esc(L.b.name)}</b>${L.song?` · «${esc(L.song)}»`:''}</p>`}
       ${G.halfNext?'<p class="vsub"><b>Diss lanzado.</b> El siguiente juega con la mitad de tiempo.</p>':''}
       ${nextBtn}`;
   }
   if(G.phase==='fail'){
-    const r=G.pending||{};const why=r.reason==='time'?'Se acabó el tiempo.':r.reason==='giveup'?'Se ha rendido.':G.songMode?'Eso no cuela.':'Ese feat no cuela.';
+    const r=G.pending||{};const why=r.reason==='time'?'¡Tiempo!':r.reason==='giveup'?'Se rinde.':'No cuela.';
+    const quip=pickS(r.reason==='time'?QUIP.time:r.reason==='giveup'?QUIP.giveup:QUIP.wrong,seed);
+    const mood=r.reason==='time'?'wow':r.reason==='giveup'?'doubt':'angry';
     const out=r.out?`<p class="vsub"><b>${esc(p.name)} se queda sin vidas.</b> Al backstage.</p>`:`<p class="vsub">Pierde una vida. Le quedan <b>${p.lives}</b>.</p>`;
     const al=alive().length;const change=nx&&G.fails>=al;
-    return`<p class="verdict bad stamp">${why}</p>${out}
+    return`${say(mood,'f'+G.chain.length+'-'+seed,`<span class="vword bad">${why}</span>${quip}`)}${out}
       ${nx?`<p class="vsub">${change?'Nadie ha sacado nada de este artista: <b>cambio de disco</b>.':`El siguiente sigue con <b>${esc(G.base.name)}</b>.`}</p>`:''}
       ${nextBtn}`;
   }
   if(G.phase==='notfound'&&G.pending.title!=null){
     const b=G.pending.b,A=curBase(),t=G.pending.title,had=G.pending.known&&G.pending.known.length;
-    return`<p class="vsub">No encuentro <b>«${esc(t)}»</b> de <b>${esc(A.name)}</b> con <b>${esc(b.name)}</b> en Spotify.${had?' Tienen temas juntos, pero no con ese título.':''} ¿Qué dice el grupo?</p>
+    return`${say('doubt','nf-'+esc(t),`No encuentro <b>«${esc(t)}»</b> de <b>${esc(A.name)}</b> con <b>${esc(b.name)}</b>.${had?' Tienen temas juntos, pero no con ese título.':''} <b>Que decida la sala.</b>`)}
       <div class="row2"><button class="ghost" id="pn-retry">Otro título</button><button class="ghost bad" id="pn-no">No cuela</button></div>
       <button class="ghost" id="pn-yes">El grupo lo da por bueno</button>
       <a class="link" href="${esc(spSearch(A.name+' '+b.name,t))}" target="_blank" rel="noopener">Buscarlo yo en Spotify</a>`;
   }
   if(G.phase==='notfound'){
     const b=G.pending.b,A=curBase();
-    return`<p class="vsub">${G.pending.err?'<b>No he podido conectar con Spotify.</b>':`No encuentro ningún tema de <b>${esc(A.name)}</b> con <b>${esc(b.name)}</b> en Spotify.`} ¿Qué dice el grupo?</p>
+    return`${say('doubt','nfa-'+esc(b.name),`${G.pending.err?'No he podido hablar con Spotify.':`No encuentro ningún tema de <b>${esc(A.name)}</b> con <b>${esc(b.name)}</b>.`} <b>Que decida la sala.</b>`)}
       <div class="row2"><button class="ghost" id="pn-retry">Probar otro</button><button class="ghost bad" id="pn-no">No cuela</button></div>
       <button class="ghost" id="pn-yes">El grupo lo da por bueno</button>
       <a class="link" href="${esc(spSearch(A.name,b.name))}" target="_blank" rel="noopener">Buscarlo yo en Spotify</a>`;
@@ -1010,7 +1139,7 @@ function panelHTML(){
   if(G.phase==='judge'){
     const b=G.pending.b,A=curBase();
     const t=G.pending.title;
-    return`<p class="vsub">Jurado: ¿existe ${t!=null?`<b>«${esc(t)}»</b>`:'un tema'} de <b>${esc(A.name)}</b> con <b>${esc(b.name)}</b>?</p>
+    return`${say('doubt','j-'+esc(b.name)+'-'+esc(t||''),`¿Existe ${t!=null?`<b>«${esc(t)}»</b>`:'un tema'} de <b>${esc(A.name)}</b> con <b>${esc(b.name)}</b>? Yo no lo tengo apuntado. <b>Que decida la sala.</b>`)}
       <div class="row2"><button class="cta" id="pn-yes">Existe</button><button class="ghost bad" id="pn-no">No cuela</button></div>
       <div class="row2"><button class="ghost" id="pn-retry">${t!=null?'Otro título':'Probar otro'}</button><a class="ghost" href="${esc(spSearch(A.name+' '+b.name,t||''))}" target="_blank" rel="noopener" style="text-decoration:none">Comprobar</a></div>`;
   }
@@ -1153,7 +1282,7 @@ async function checkUpdate(){
   if(IN_ARTIFACT||location.protocol==='file:')return;
   try{
     const r=await fetch(location.pathname+'?t='+Date.now(),{cache:'no-store'});const t=await r.text();
-    const m=t.match(/FA-(\d{3}) · ℗/),mine=11;
+    const m=t.match(/FA-(\d{3}) · ℗/),mine=12;
     if(m&&+m[1]>mine&&(!G||G.phase==='over'||G.paused)){location.replace(location.pathname+'?v='+m[1]);}
   }catch(e){}
 }
