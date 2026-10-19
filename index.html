@@ -263,7 +263,7 @@ h2.h{font:900 34px/.95 var(--f-wide);font-stretch:125%;text-transform:uppercase;
 <!-- ================= HOME ================= -->
 <section class="screen" id="scr-home">
   <div class="wrap">
-    <div class="cat"><span class="mono">FA-001 · ℗ 2026</span><span class="mono">El Invitado Records</span></div>
+    <div class="cat"><span class="mono">FA-003 · ℗ 2026</span><span class="mono">El Invitado Records</span></div>
     <h1 class="logo" aria-label="Feat Arena"><span class="w" aria-hidden="true">Feat</span><span class="w out" aria-hidden="true">Arena</span><span class="ft" aria-hidden="true">ft.</span></h1>
     <p class="tagline">Suena un tema. Tú dices con quién ha colaborado el artista y en qué canción. El siguiente sigue la cadena.</p>
     <ol class="credits" aria-label="Así suena una partida">
@@ -505,17 +505,23 @@ const SP={
   async topArtists(){try{const r=await this.api('/me/top/artists?limit=30&time_range=medium_term');return(r.data&&r.data.items||[]).map(a=>a.name);}catch(e){return[];}},
   async play(uri){
     const body=JSON.stringify({uris:[uri]});
-    let r=await this.api('/me/player/play'+(this.dev?'?device_id='+this.dev:''),{method:'PUT',body});
+    const go=dev=>this.api('/me/player/play'+(dev?'?device_id='+encodeURIComponent(dev):''),{method:'PUT',body});
+    let r=await go(this.dev);
+    if(r.ok)return'ok';
     if(r.status===403)return'premium';
-    if(!r.ok){
-      const d=await this.api('/me/player/devices');const list=d.data&&d.data.devices||[];
-      const dev=list.find(x=>x.is_active)||list.find(x=>/smartphone/i.test(x.type))||list[0];
-      if(!dev)return'nodevice';
-      this.dev=dev.id;r=await this.api('/me/player/play?device_id='+dev.id,{method:'PUT',body});
-      if(r.status===403)return'premium';
+    const d=await this.api('/me/player/devices');
+    const list=(d.data&&d.data.devices||[]).filter(x=>!x.is_restricted);
+    const dev=list.find(x=>x.is_active)||list.find(x=>/smartphone/i.test(x.type))||list[0];
+    if(!dev){this.dev=null;return'nodevice';}
+    this.dev=dev.id;r=await go(dev.id);
+    if(!r.ok&&r.status!==403){
+      await this.api('/me/player',{method:'PUT',body:JSON.stringify({device_ids:[dev.id],play:false})});
+      await new Promise(k=>setTimeout(k,500));r=await go(dev.id);
     }
+    if(r.status===403)return'premium';
     return r.ok?'ok':'error';
   },
+  async nowUri(){try{const r=await this.api('/me/player');return r.ok&&r.data&&r.data.item?r.data.item.uri:null;}catch(e){return null;}},
   async savePlaylist(name,uris){
     const p=await this.api('/me/playlists',{method:'POST',body:JSON.stringify({name,public:false,description:'Mixtape de una partida de Feat Arena.'})});
     if(!p.ok||!p.data)throw new Error('pl');
@@ -637,7 +643,7 @@ function renderSetup(){
   $('#set-rules').innerHTML=`<div class="wrow"><div><b>Artista y canción</b><p>Además de con quién, hay que decir el título del tema. Si lo apagas, basta con el artista.</p></div><button class="sw" data-rule="song" role="switch" aria-checked="${!!cfg.song}" aria-label="Exigir la canción"></button></div>`;
   $('#set-wild').innerHTML=Object.keys(WILD).map(k=>`<div class="wrow"><div><b>${WILD[k].name}</b><p>${WILD[k].desc}</p></div><button class="sw" data-wild="${k}" role="switch" aria-checked="${!!cfg.wild[k]}" aria-label="${WILD[k].name}"></button></div>`).join('');
   $('#set-go').textContent=m==='spotify'?'Pinchar el primer tema':'Sacar el primer artista';
-  $('#set-note').textContent=m==='spotify'?'El primer tema sonará en el Spotify de este móvil. Ábrelo antes y déjalo en segundo plano.':'Sin Spotify conectado: el grupo hace de jurado y decide si cada feat existe.';
+  $('#set-note').textContent=m==='spotify'?'El primer tema sonará en el Spotify de este móvil. Antes de empezar, abre Spotify y pon cualquier canción: así el juego lo encuentra.':'Sin Spotify conectado: el grupo hace de jurado y decide si cada feat existe.';
 }
 $('#set-players').addEventListener('input',e=>{const m=e.target.id.match(/^pl-(\d)$/);if(m){cfg.players[+m[1]]=e.target.value;ls.set('fa.cfg',cfg);}});
 $('#set-players').addEventListener('click',e=>{const b=e.target.closest('[data-rm]');if(b){cfg.players.splice(+b.dataset.rm,1);ls.set('fa.cfg',cfg);renderSetup();}});
@@ -653,6 +659,24 @@ $('#set-go').onclick=startGame;
 let tick=null,wakeLock=null;
 async function keepAwake(){try{if('wakeLock' in navigator&&!wakeLock){wakeLock=await navigator.wakeLock.request('screen');wakeLock.addEventListener('release',()=>{wakeLock=null;});}}catch(e){}}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&G&&G.phase!=='over')keepAwake();});
+let retrying=false;
+async function retryPlay(manual){
+  if(!G||G.mode!=='spotify'||!G.np||!G.np.track||retrying)return;
+  retrying=true;const t=G.np.track;
+  try{
+    const now=await SP.nowUri();
+    G.playState=now===t.uri?'ok':await SP.play(t.uri);
+  }catch(e){G.playState='error';}
+  retrying=false;saveG();renderGame();
+  if(G.playState==='ok')toast('Spotify encontrado. Sonando.');
+  else if(manual)toast(G.playState==='nodevice'?'Sigo sin ver Spotify. Ábrelo y dale al play.':'No he podido ponerlo.');
+}
+document.addEventListener('visibilitychange',()=>{
+  if(!G)return;
+  if(document.hidden){if(G.phase==='turn'||G.phase==='song')pauseClock();return;}
+  if($('#ov-pause').hidden)resumeClock();
+  if(G.playState&&G.playState!=='ok')setTimeout(()=>retryPlay(false),600);
+});
 
 async function startGame(){
   const names=cfg.players.map((n,i)=>n.trim()||`Jugador ${i+1}`);
@@ -809,8 +833,8 @@ function renderGame(){
   const bn=$('#g-banner');
   if(G.mode==='spotify'&&G.playState&&G.playState!=='ok'&&G.np&&G.np.track){
     const t=G.np.track;
-    bn.innerHTML=`<div class="banner">${G.playState==='nodevice'?'<span><b>No encuentro tu Spotify.</b> Ábrelo en este móvil, dale al play a cualquier cosa y vuelve.</span>':G.playState==='premium'?'<span><b>Para que suene solo hace falta Premium.</b> Puedes abrir cada tema a mano.</span>':'<span><b>No he podido ponerlo.</b> Ábrelo a mano o reinténtalo.</span>'}<div class="row2"><a class="ghost" href="${esc(t.url||'#')}" target="_blank" rel="noopener" style="text-decoration:none">Abrir el tema</a><button class="ghost" id="g-retry">Reintentar</button></div></div>`;
-    $('#g-retry').onclick=async()=>{G.playState=await SP.play(t.uri).catch(()=>'error');saveG();renderGame();};
+    bn.innerHTML=`<div class="banner">${G.playState==='nodevice'?'<span><b>Spotify no está abierto en este móvil.</b> Toca «Abrir en Spotify», dale al play y vuelve aquí. El juego lo detecta solo y a partir de ahí todo suena sin tocar nada.</span>':G.playState==='premium'?'<span><b>Para que suene solo hace falta Premium.</b> Puedes abrir cada tema a mano.</span>':'<span><b>No he podido ponerlo.</b> Ábrelo en Spotify o reinténtalo.</span>'}<div class="row2"><a class="cta" href="${esc(t.url||'#')}" target="_blank" rel="noopener" style="text-decoration:none;min-height:50px;font-size:14px">Abrir en Spotify</a><button class="ghost" id="g-retry">Reintentar</button></div></div>`;
+    $('#g-retry').onclick=()=>retryPlay(true);
   }else bn.innerHTML='';
   // turn & credit
   const A=G.phase==='ok'&&G.chain.length?G.chain[G.chain.length-1].a:(G.base?curBase():null);
