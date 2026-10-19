@@ -263,7 +263,7 @@ h2.h{font:900 34px/.95 var(--f-wide);font-stretch:125%;text-transform:uppercase;
 <!-- ================= HOME ================= -->
 <section class="screen" id="scr-home">
   <div class="wrap">
-    <div class="cat"><span class="mono">FA-004 · ℗ 2026</span><span class="mono">El Invitado Records</span></div>
+    <div class="cat"><span class="mono">FA-005 · ℗ 2026</span><span class="mono">El Invitado Records</span></div>
     <h1 class="logo" aria-label="Feat Arena"><span class="w" aria-hidden="true">Feat</span><span class="w out" aria-hidden="true">Arena</span><span class="ft" aria-hidden="true">ft.</span></h1>
     <p class="tagline">Suena un tema. Tú dices con quién ha colaborado el artista y en qué canción. El siguiente sigue la cadena.</p>
     <ol class="credits" aria-label="Así suena una partida">
@@ -460,7 +460,7 @@ const SP={
   lastErr:'',
   async diag(){
     const L=[];const em=r=>r&&r.data&&r.data.error?(r.data.error.reason||r.data.error.message||''):'';
-    L.push('Versión: FA-004');L.push('Dirección: '+location.origin+location.pathname);
+    L.push('Versión: FA-005');L.push('Dirección: '+location.origin+location.pathname);
     L.push('Móvil: '+(/iPhone|iPad/.test(navigator.userAgent)?'iPhone':/Android/.test(navigator.userAgent)?'Android':'otro')+' · '+(navigator.userAgent.match(/(CriOS|FxiOS|EdgiOS|Chrome|Firefox|Version)\/[\d.]+/)||[''])[0]);
     if(!this.ready){L.push('Spotify: no conectado');return L.join('\n');}
     try{
@@ -524,8 +524,11 @@ const SP={
   },
   async topArtists(){try{const r=await this.api('/me/top/artists?limit=30&time_range=medium_term');return(r.data&&r.data.items||[]).map(a=>a.name);}catch(e){return[];}},
   async play(uri){
-    const body=JSON.stringify({uris:[uri]});
-    const go=dev=>this.api('/me/player/play'+(dev?'?device_id='+encodeURIComponent(dev):''),{method:'PUT',body});
+    const ctx=ALBUM[uri];
+    const bodyCtx=ctx?JSON.stringify({context_uri:ctx,offset:{uri}}):null,bodyOne=JSON.stringify({uris:[uri]});
+    const go=async dev=>{const q='/me/player/play'+(dev?'?device_id='+encodeURIComponent(dev):'');
+      if(bodyCtx){const a=await this.api(q,{method:'PUT',body:bodyCtx});if(a.ok||a.status===404||a.status===403)return a;}
+      return this.api(q,{method:'PUT',body:bodyOne});};
     const em=x=>x&&x.data&&x.data.error?(x.data.error.reason||x.data.error.message||''):'';
     let r=await go(this.dev);
     if(r.ok){this.lastErr='';return'ok';}
@@ -572,7 +575,8 @@ function titleMatch(said,title){
 }
 const STOP=new Set(['vol','feat','ft','the','el','la','los','las','de','del','y','and','with','con','a','en']);
 function featIn(title,name){const t=norm(title),n=norm(name);return n.length>2&&t.includes(n)&&/(feat|ft\.|with|con |\(|x )/i.test(title);}
-function trackOf(t){return{id:t.id,uri:t.uri,name:t.name,artists:t.artists.map(a=>({id:a.id,name:a.name})),img:imgOf(t.album&&t.album.images,120),url:t.external_urls&&t.external_urls.spotify};}
+const ALBUM={};
+function trackOf(t){if(t.album&&t.album.uri)ALBUM[t.uri]=t.album.uri;return{album:t.album&&t.album.uri,id:t.id,uri:t.uri,name:t.name,artists:t.artists.map(a=>({id:a.id,name:a.name})),img:imgOf(t.album&&t.album.images,120),url:t.external_urls&&t.external_urls.spotify};}
 const spSearch=(a,b)=>'https://open.spotify.com/search/'+encodeURIComponent(a+' '+b);
 
 /* ================= state ================= */
@@ -1078,6 +1082,7 @@ $('#o-copy').onclick=()=>{
 /* ================= boot ================= */
 (async function boot(){
   if(CAN_SPOTIFY)await SP.callback();
+  if(G){[].concat(G.records||[],G.chain||[]).forEach(x=>{const t=x.track;if(t&&t.album)ALBUM[t.uri]=t.album;(x.alts||[]).forEach(a=>{if(a.album)ALBUM[a.uri]=a.album;});});if(G.np&&G.np.track&&G.np.track.album)ALBUM[G.np.track.uri]=G.np.track.album;}
   if(G){if(G.phase==='checking')G.phase='turn';if(G.phase==='verifying')G.phase='song';if(G.phase==='turn'||G.phase==='song'){G.remain=G.turnMs;G.endsAt=0;G.paused=true;}saveG();}
   renderHome();show('scr-home');
   if(!ls.get('fa.intro'))openIntro();
