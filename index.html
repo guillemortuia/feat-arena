@@ -263,7 +263,7 @@ h2.h{font:900 34px/.95 var(--f-wide);font-stretch:125%;text-transform:uppercase;
 <!-- ================= HOME ================= -->
 <section class="screen" id="scr-home">
   <div class="wrap">
-    <div class="cat"><span class="mono">FA-005 · ℗ 2026</span><span class="mono">El Invitado Records</span></div>
+    <div class="cat"><span class="mono">FA-006 · ℗ 2026</span><span class="mono">El Invitado Records</span></div>
     <h1 class="logo" aria-label="Feat Arena"><span class="w" aria-hidden="true">Feat</span><span class="w out" aria-hidden="true">Arena</span><span class="ft" aria-hidden="true">ft.</span></h1>
     <p class="tagline">Suena un tema. Tú dices con quién ha colaborado el artista y en qué canción. El siguiente sigue la cadena.</p>
     <ol class="credits" aria-label="Así suena una partida">
@@ -460,7 +460,7 @@ const SP={
   lastErr:'',
   async diag(){
     const L=[];const em=r=>r&&r.data&&r.data.error?(r.data.error.reason||r.data.error.message||''):'';
-    L.push('Versión: FA-005');L.push('Dirección: '+location.origin+location.pathname);
+    L.push('Versión: FA-006');L.push('Dirección: '+location.origin+location.pathname);
     L.push('Móvil: '+(/iPhone|iPad/.test(navigator.userAgent)?'iPhone':/Android/.test(navigator.userAgent)?'Android':'otro')+' · '+(navigator.userAgent.match(/(CriOS|FxiOS|EdgiOS|Chrome|Firefox|Version)\/[\d.]+/)||[''])[0]);
     if(!this.ready){L.push('Spotify: no conectado');return L.join('\n');}
     try{
@@ -473,7 +473,8 @@ const SP={
       const sr=await this.api('/search?type=track&limit=1&q='+encodeURIComponent('Flashing Lights Kanye West'));
       const it=sr.data&&sr.data.tracks&&sr.data.tracks.items&&sr.data.tracks.items[0];
       if(!it)L.push('Búsqueda: error '+sr.status+' '+em(sr));
-      else{const res=await this.play(it.uri);L.push('Prueba de sonido: '+(res==='ok'?'OK, suena':res+' · '+this.lastErr));}
+      else{if(it.album&&it.album.uri)ALBUM[it.uri]=it.album.uri;const res=await this.play(it.uri);L.push('Prueba de sonido: '+(res==='ok'?'orden aceptada':res+' · '+this.lastErr));
+        const af=await this.api('/me/player');L.push('Después: '+(af.status===204?'nada':af.ok?(af.data.is_playing?'sonando':'en pausa')+' · '+((af.data.item&&af.data.item.name)||'—')+' en '+((af.data.device&&af.data.device.name)||'?'):'error '+af.status));}
     }catch(e){L.push('Error: '+(e&&e.message||e));}
     return L.join('\n');
   },
@@ -524,29 +525,42 @@ const SP={
   },
   async topArtists(){try{const r=await this.api('/me/top/artists?limit=30&time_range=medium_term');return(r.data&&r.data.items||[]).map(a=>a.name);}catch(e){return[];}},
   async play(uri){
-    const ctx=ALBUM[uri];
+    const ctx=ALBUM[uri],em=x=>x&&x.data&&x.data.error?(x.data.error.reason||x.data.error.message||''):'';
     const bodyCtx=ctx?JSON.stringify({context_uri:ctx,offset:{uri}}):null,bodyOne=JSON.stringify({uris:[uri]});
     const go=async dev=>{const q='/me/player/play'+(dev?'?device_id='+encodeURIComponent(dev):'');
-      if(bodyCtx){const a=await this.api(q,{method:'PUT',body:bodyCtx});if(a.ok||a.status===404||a.status===403)return a;}
+      if(bodyCtx){const a=await this.api(q,{method:'PUT',body:bodyCtx});if(a.status!==400)return a;}
       return this.api(q,{method:'PUT',body:bodyOne});};
-    const em=x=>x&&x.data&&x.data.error?(x.data.error.reason||x.data.error.message||''):'';
     let r=await go(this.dev);
-    if(r.ok){this.lastErr='';return'ok';}
-    this.lastErr=`play ${r.status} ${em(r)}`.trim();
-    if(r.status===403)return'premium';
-    const d=await this.api('/me/player/devices');
-    this.lastErr+=` · devices ${d.status} (${(d.data&&d.data.devices||[]).length})`;
-    const list=(d.data&&d.data.devices||[]).filter(x=>!x.is_restricted);
-    const dev=list.find(x=>x.is_active)||list.find(x=>/smartphone/i.test(x.type))||list[0];
-    if(!dev){this.dev=null;return'nodevice';}
-    this.dev=dev.id;r=await go(dev.id);
-    if(!r.ok&&r.status!==403){
-      await this.api('/me/player',{method:'PUT',body:JSON.stringify({device_ids:[dev.id],play:false})});
-      await new Promise(k=>setTimeout(k,500));r=await go(dev.id);
+    if(!r.ok){
+      this.lastErr=`play ${r.status} ${em(r)}`.trim();
+      if(r.status===403)return'premium';
+      const d=await this.api('/me/player/devices');
+      const list=(d.data&&d.data.devices||[]).filter(x=>!x.is_restricted);
+      this.lastErr+=` · devices ${d.status} (${list.length})`;
+      const dev=list.find(x=>x.is_active)||list.find(x=>/smartphone/i.test(x.type))||list[0];
+      if(!dev){this.dev=null;return'nodevice';}
+      this.dev=dev.id;r=await go(dev.id);
+      if(!r.ok&&r.status!==403){
+        await this.api('/me/player',{method:'PUT',body:JSON.stringify({device_ids:[dev.id],play:true})});
+        await new Promise(k=>setTimeout(k,700));r=await go(dev.id);
+      }
+      if(!r.ok)this.lastErr+=` · play2 ${r.status} ${em(r)}`;
+      if(r.status===403)return'premium';
+      if(!r.ok)return'error';
     }
-    if(!r.ok)this.lastErr+=` · play2 ${r.status} ${em(r)}`;
-    if(r.status===403)return'premium';
-    return r.ok?'ok':'error';
+    this.lastErr='';
+    await this.keepPlaying(uri);
+    return'ok';
+  },
+  async keepPlaying(uri){
+    for(let i=0;i<2;i++){
+      await new Promise(k=>setTimeout(k,1100));
+      const st=await this.api('/me/player');
+      if(!st.ok||!st.data)return;
+      if(st.data.device&&st.data.device.id)this.dev=st.data.device.id;
+      if(st.data.is_playing)return;
+      await this.api('/me/player/play'+(this.dev?'?device_id='+encodeURIComponent(this.dev):''),{method:'PUT'});
+    }
   },
   async nowUri(){try{const r=await this.api('/me/player');return r.ok&&r.data&&r.data.item?r.data.item.uri:null;}catch(e){return null;}},
   async savePlaylist(name,uris){
